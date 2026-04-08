@@ -11,6 +11,7 @@
 ![队伍列表](./docs/team.png)
 ![编辑队伍](./docs/team-edit.png)
 ![选择关卡](./docs/level-select.png)
+![战斗画面](./docs/battle.png)
 
 ## 项目结构
 

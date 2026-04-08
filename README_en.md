@@ -11,6 +11,7 @@ A vanilla JavaScript card-matching battle game using HTML5 Canvas.
 ![Team List](./docs/team.png)
 ![Edit Team](./docs/team-edit.png)
 ![Select Level](./docs/level-select.png)
+![Battle](./docs/battle.png)
 
 ## Project Structure
 
