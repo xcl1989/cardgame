@@ -178,3 +178,28 @@ INSERT INTO level_enemy_map (level_id, enemy_id, slot_position) VALUES
 -- 测试用户
 INSERT INTO users (id, username, password, nickname, max_teams) VALUES
 ('a855635a-322e-11f1-9cbd-df2001a53a33', 'xcl1989', '123456', 'gamemaster', 2);
+
+-- 玩家角色
+INSERT INTO player_characters (id, user_id, character_type_id, character_name) VALUES
+(1, 'a855635a-322e-11f1-9cbd-df2001a53a33', 1, '阿基米德'),
+(2, 'a855635a-322e-11f1-9cbd-df2001a53a33', 1, '帕利卡'),
+(3, 'a855635a-322e-11f1-9cbd-df2001a53a33', 2, '古斯特'),
+(4, 'a855635a-322e-11f1-9cbd-df2001a53a33', 2, '莱昂拉多'),
+(5, 'a855635a-322e-11f1-9cbd-df2001a53a33', 3, '加百列'),
+(6, 'a855635a-322e-11f1-9cbd-df2001a53a33', 3, '克洛');
+
+-- 队伍
+INSERT INTO teams (id, user_id, team_name) VALUES
+(1, 'a855635a-322e-11f1-9cbd-df2001a53a33', '队伍1'),
+(2, 'a855635a-322e-11f1-9cbd-df2001a53a33', '队伍2');
+
+-- 队伍角色关联 (team_id, character_id, slot_position, passive_skill_id, active_skill_id)
+INSERT INTO team_character_map (team_id, character_id, slot_position, passive_skill_id, active_skill_id) VALUES
+(1, 1, 0, 11, 5),
+(1, 2, 1, 2, 9),
+(1, 3, 2, 3, 6),
+(1, 6, 3, 4, 8),
+(2, 6, 0, 4, 7),
+(2, 3, 1, 4, 10),
+(2, 4, 2, 4, 6),
+(2, 5, 3, 3, 8);
