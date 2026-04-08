@@ -32,3 +32,7 @@ pages/
 # Environment
 .env
 .env.local
+
+#opencode
+.opencode
+AGENTS.md
