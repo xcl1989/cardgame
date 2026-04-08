@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>登录 - 卡牌消除</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #1a1a2e;
+            font-family: Arial, sans-serif;
+        }
+        .login-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .login-box {
+            width: 100%;
+            max-width: 320px;
+            background: #2a2a4e;
+            border-radius: 16px;
+            padding: 40px 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+        .login-title {
+            color: #fff;
+            font-size: 28px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .login-subtitle {
+            color: #888;
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        .input-label {
+            color: #aaa;
+            font-size: 14px;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .input-field {
+            width: 100%;
+            padding: 14px 16px;
+            background: #1a1a2e;
+            border: 2px solid #3a3a5e;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .input-field:focus {
+            border-color: #4488ff;
+        }
+        .input-field::placeholder {
+            color: #555;
+        }
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #4488ff, #6644ff);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        .login-btn:hover {
+            opacity: 0.9;
+        }
+        .login-btn:active {
+            transform: scale(0.98);
+        }
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .error-msg {
+            color: #ff4444;
+            font-size: 13px;
+            margin-top: 10px;
+            text-align: center;
+            min-height: 20px;
+        }
+        .hint {
+            color: #555;
+            font-size: 12px;
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-box">
+            <div class="login-title">卡牌消除</div>
+            <div class="login-subtitle">登录后开始游戏</div>
+
+            <div class="input-group">
+                <label class="input-label">账号</label>
+                <input type="text" class="input-field" id="username" placeholder="请输入账号" autocomplete="off">
+            </div>
+
+            <div class="input-group">
+                <label class="input-label">密码</label>
+                <input type="password" class="input-field" id="password" placeholder="请输入密码">
+            </div>
+
+            <button class="login-btn" id="loginBtn">登录</button>
+            <div class="error-msg" id="errorMsg"></div>
+
+            <div class="hint">测试账号: admin / 123456</div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+
+        const loginBtn = document.getElementById('loginBtn');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const errorMsg = document.getElementById('errorMsg');
+
+        async function doLogin() {
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!username) {
+                showError('请输入账号');
+                return;
+            }
+            if (!password) {
+                showError('请输入密码');
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = '登录中...';
+
+            try {
+                const res = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || '登录失败');
+                }
+
+                const data = await res.json();
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('username', data.username);
+                localStorage.setItem('max_teams', data.max_teams);
+                window.location.href = 'main.html';
+            } catch (e) {
+                showError(e.message);
+                loginBtn.disabled = false;
+                loginBtn.textContent = '登录';
+            }
+        }
+
+        function showError(msg) {
+            errorMsg.textContent = msg;
+        }
+
+        function clearError() {
+            errorMsg.textContent = '';
+        }
+
+        loginBtn.addEventListener('click', doLogin);
+
+        passwordInput.addEventListener('keypress', e => {
+            if (e.key === 'Enter') {
+                doLogin();
+            }
+        });
+
+        usernameInput.addEventListener('input', clearError);
+        passwordInput.addEventListener('input', clearError);
+    </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+Copyright 2024 Data Agent Project
+
+Proprietary License
+
+This software and associated documentation files (the "Software") are proprietary 
+and confidential. Unauthorized copying, distribution, or use of this Software is 
+strictly prohibited.
+
+The Software may only be used within the scope of the Data Agent project and 
+authorized integrations.
+
+For licensing inquiries, please contact the project maintainers.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.

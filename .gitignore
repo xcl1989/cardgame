@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+.ruff_cache/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+server.log
+vite.log
+
+# Misc
+*.bak
+.DS_Store
+cookies.txt
+
+# Empty dirs (can be removed if recreated)
+assets/
+images/
+pages/
+
+# Environment
+.env
+.env.local

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>卡牌消除 - 主界面</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #1a1a2e;
+            font-family: Arial, sans-serif;
+        }
+        .main-container {
+            width: 100%;
+            height: 100%;
+            max-width: 375px;
+            max-width: 375px;
+            margin: 0 auto;
+            background: #2a2a4e;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .header {
+            height: 60px;
+            background: #252545;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 2px solid #3a3a5e;
+        }
+        .header-title {
+            color: #fff;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .user-info {
+            position: absolute;
+            left: 15px;
+            color: #aaa;
+            font-size: 14px;
+        }
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            gap: 25px;
+        }
+        .menu-btn {
+            width: 100%;
+            max-width: 280px;
+            padding: 25px 30px;
+            background: linear-gradient(135deg, #3a3a6e, #2a2a5e);
+            border: 2px solid #5a5a8e;
+            border-radius: 16px;
+            color: #fff;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, border-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .menu-btn:hover {
+            border-color: #8a8aae;
+            transform: scale(1.02);
+        }
+        .menu-btn:active {
+            transform: scale(0.98);
+        }
+        .menu-btn .icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        .menu-btn.battle {
+            background: linear-gradient(135deg, #ff6666, #ff4444);
+            border-color: #ff8888;
+        }
+        .menu-btn.battle:hover {
+            border-color: #ffaaaa;
+        }
+        .menu-btn.characters {
+            background: linear-gradient(135deg, #4488ff, #2266dd);
+            border-color: #66aaff;
+        }
+        .menu-btn.characters:hover {
+            border-color: #88ccff;
+        }
+        .menu-btn.team {
+            background: linear-gradient(135deg, #44dd88, #22bb66);
+            border-color: #66ffaa;
+        }
+        .menu-btn.team:hover {
+            border-color: #88ffcc;
+        }
+        .logout-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 8px 16px;
+            background: #ff4444;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .logout-btn:hover {
+            background: #ff6666;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="header">
+            <span class="user-info" id="username"></span>
+            <span class="header-title">卡牌消除</span>
+            <button class="logout-btn" onclick="logout()">退出</button>
+        </div>
+        <div class="content">
+            <button class="menu-btn characters" onclick="showCharacters()">
+                <span class="icon">👥</span>
+                <span>角色列表</span>
+            </button>
+            <button class="menu-btn team" onclick="showTeam()">
+                <span class="icon">⚔️</span>
+                <span>队伍设置</span>
+            </button>
+            <button class="menu-btn battle" onclick="startBattle()">
+                <span class="icon">🎮</span>
+                <span>进入战斗</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+
+        async function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'login.html';
+                return false;
+            }
+            try {
+                const res = await fetch(`${API_BASE}/verify`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error('Token invalid');
+                const data = await res.json();
+                document.getElementById('username').textContent = data.username;
+                return true;
+            } catch (e) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('username');
+                window.location.href = 'login.html';
+                return false;
+            }
+        }
+
+        async function logout() {
+            const token = localStorage.getItem('token');
+            if (token) {
+                try {
+                    await fetch(`${API_BASE}/logout`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                } catch (e) {}
+            }
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
+            window.location.href = 'login.html';
+        }
+
+        function showCharacters() {
+            window.location.href = 'characters.html';
+        }
+
+        function showTeam() {
+            window.location.href = 'team.html';
+        }
+
+        function startBattle() {
+            window.location.href = 'level-select.html';
+        }
+
+        checkAuth();
+    </script>
+</body>
+</html>
