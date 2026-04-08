@@ -7,6 +7,10 @@
 ## 截图
 
 ![登录页面](./docs/login.png)
+![主菜单](./docs/main.png)
+![队伍列表](./docs/team.png)
+![编辑队伍](./docs/team-edit.png)
+![选择关卡](./docs/level-select.png)
 
 ## 项目结构
 
