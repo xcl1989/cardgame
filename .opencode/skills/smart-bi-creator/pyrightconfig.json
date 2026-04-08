@@ -1,8 +1,0 @@
-{
-  "extraPaths": ["/Users/xiecongling/Documents/Coding/dataAgent/.opencode/skills/smart-bi-creator/scripts"],
-  "executionEnvironments": [
-    {
-      "root": "."
-    }
-  ]
-}
