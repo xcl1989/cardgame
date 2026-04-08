@@ -4,6 +4,10 @@
 
 基于 HTML5 Canvas 和原生 JavaScript 的卡牌消除对战游戏。
 
+## 截图
+
+![登录页面](./docs/login.png)
+
 ## 项目结构
 
 ```
