@@ -77,7 +77,7 @@ npm run dev      # Visit http://localhost:8080
 
 ## Test Account
 
-- Username: 17380534281
+- Username: xcl1989
 - Password: 123456
 
 ## Code Style

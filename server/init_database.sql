@@ -177,4 +177,4 @@ INSERT INTO level_enemy_map (level_id, enemy_id, slot_position) VALUES
 
 -- 测试用户
 INSERT INTO users (id, username, password, nickname, max_teams) VALUES
-('a855635a-322e-11f1-9cbd-df2001a53a33', '17380534281', '123456', 'gamemaster', 2);
+('a855635a-322e-11f1-9cbd-df2001a53a33', 'xcl1989', '123456', 'gamemaster', 2);
