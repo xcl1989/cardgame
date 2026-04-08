@@ -1,3 +1,5 @@
+English | [中文](./README.md)
+
 # Card Game
 
 A vanilla JavaScript card-matching battle game using HTML5 Canvas.

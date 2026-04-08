@@ -1,3 +1,5 @@
+[English](./README_en.md) | 中文
+
 # 卡牌消除游戏 (Card Game)
 
 基于 HTML5 Canvas 和原生 JavaScript 的卡牌消除对战游戏。
