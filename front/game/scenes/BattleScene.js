@@ -25,6 +25,7 @@ class BattleScene {
 
         this.board = new Board(this.config.ballProbability);
         this.board.create();
+        this.healFromInvalidBonus = this.config.healFromInvalidBonus || false;
 
         this.playerHp = this.config.playerHp;
         this.enemies = this.config.enemies || [{ enemy_name: '敌人', hp: 500, attack: 20, defense: 0 }];
@@ -323,6 +324,25 @@ class BattleScene {
         this._updateEnemyHpDisplay();
     }
 
+    _applyHealFromInvalid() {
+        if (!this.healFromInvalidBonus) return;
+        const invalidPositions = [];
+        for (let r = 0; r < this.board.grid.length; r++) {
+            for (let c = 0; c < this.board.grid[r].length; c++) {
+                if (this.board.grid[r][c] === 4) {
+                    invalidPositions.push({ r, c });
+                }
+            }
+        }
+        if (invalidPositions.length === 0) return;
+        const shuffle = invalidPositions.sort(() => Math.random() - 0.5);
+        const count = Math.min(shuffle.length, Math.floor(Math.random() * 2) + 1);
+        for (let i = 0; i < count; i++) {
+            const { r, c } = shuffle[i];
+            this.board.grid[r][c] = 2;
+        }
+    }
+
     _updateEnemyHpDisplay() {
         const fill = document.getElementById('enemy-hp-fill');
         const text = document.getElementById('enemy-hp-text');
@@ -619,7 +639,9 @@ class BattleScene {
 
         if (this.playerHp <= 0) {
             this._showGameOver();
+            return;
         }
+        this._applyHealFromInvalid();
     }
 
     _showGameOver() {

@@ -75,7 +75,14 @@ def get_user_characters(user_id: str) -> list:
     with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
-                "SELECT id, character_type_id, character_name, created_at FROM player_characters WHERE user_id=%s ORDER BY created_at",
+                """SELECT pc.id, pc.character_type_id, pc.character_name, pc.rarity,
+                          pc.attack_bonus, pc.defense_bonus, pc.recovery_bonus,
+                          pc.hp_bonus, pc.operation_time_bonus, pc.bound_passive_skill_id,
+                          s.name as bound_skill_name, s.description as bound_skill_desc,
+                          pc.created_at
+                   FROM player_characters pc
+                   LEFT JOIN skills s ON pc.bound_passive_skill_id = s.id
+                   WHERE pc.user_id=%s ORDER BY pc.created_at""",
                 (user_id,),
             )
             return list(cursor.fetchall())
@@ -85,15 +92,20 @@ def get_user_teams(user_id: str) -> list:
     with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
-                """SELECT t.*, tcm.slot_position, tcm.character_id, tcm.passive_skill_id, tcm.active_skill_id,
-                          pc.character_name, pc.character_type_id, ct.type_name, ct.base_attack, ct.hp, ct.operation_time, ct.defense,
+                """SELECT t.*, tcm.slot_position, tcm.character_id,
+                          CASE WHEN pc.bound_passive_skill_id IS NOT NULL THEN pc.bound_passive_skill_id ELSE tcm.passive_skill_id END as effective_passive_skill_id,
+                          tcm.active_skill_id,
+                          pc.character_name, pc.character_type_id, pc.rarity,
+                          pc.attack_bonus, pc.defense_bonus, pc.recovery_bonus,
+                          pc.hp_bonus, pc.operation_time_bonus, pc.bound_passive_skill_id,
+                          ct.type_name, ct.base_attack, ct.hp, ct.operation_time, ct.defense,
                           pas.name as passive_skill_name, pas.description as passive_skill_desc, pas.effect_value as passive_effect_value,
                           act.name as active_skill_name, act.description as active_skill_desc, act.effect_value as active_effect_value
                    FROM teams t
                    LEFT JOIN team_character_map tcm ON t.id = tcm.team_id
                    LEFT JOIN player_characters pc ON tcm.character_id = pc.id
                    LEFT JOIN character_types ct ON pc.character_type_id = ct.id
-                   LEFT JOIN skills pas ON tcm.passive_skill_id = pas.id
+                   LEFT JOIN skills pas ON (CASE WHEN pc.bound_passive_skill_id IS NOT NULL THEN pc.bound_passive_skill_id ELSE tcm.passive_skill_id END) = pas.id
                    LEFT JOIN skills act ON tcm.active_skill_id = act.id
                    WHERE t.user_id=%s
                    ORDER BY t.created_at, tcm.slot_position""",
@@ -116,10 +128,17 @@ def get_user_teams(user_id: str) -> list:
                     char = {
                         "slot_position": row["slot_position"],
                         "character_id": row["character_id"],
-                        "passive_skill_id": row["passive_skill_id"],
+                        "passive_skill_id": row["effective_passive_skill_id"],
                         "active_skill_id": row["active_skill_id"],
                         "character_name": row["character_name"],
                         "character_type_id": row["character_type_id"],
+                        "rarity": row["rarity"],
+                        "attack_bonus": row["attack_bonus"],
+                        "defense_bonus": row["defense_bonus"],
+                        "recovery_bonus": row["recovery_bonus"],
+                        "hp_bonus": row["hp_bonus"],
+                        "operation_time_bonus": row["operation_time_bonus"],
+                        "bound_passive_skill_id": row["bound_passive_skill_id"],
                         "type_name": row["type_name"],
                         "base_attack": row["base_attack"],
                         "hp": row["hp"],

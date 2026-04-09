@@ -24,8 +24,16 @@
         .char-card.warrior { border-color: #ff4444; }
         .char-card.archer { border-color: #4488ff; }
         .char-card.mage { border-color: #ffff44; }
-        .char-card-name { font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 4px; }
+        .char-card-name { font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+        .rarity-badge { font-size: 10px; padding: 1px 6px; border-radius: 4px; font-weight: normal; }
+        .rarity-normal { background: #555; color: #aaa; }
+        .rarity-advanced { background: #2a6e2a; color: #8f8; }
+        .rarity-rare { background: #2a2a6e; color: #88f; }
+        .rarity-legendary { background: #6e4a2a; color: #fa4; }
         .char-card-type { font-size: 13px; color: #aaa; }
+        .char-bonus { font-size: 11px; color: #ccc; margin-top: 4px; }
+        .bonus-item { display: inline-block; margin-right: 8px; }
+        .bound-skill { font-size: 11px; color: #fa4; margin-top: 4px; }
     </style>
 </head>
 <body>
@@ -60,6 +68,8 @@
             }
         }
 
+        const rarityNames = { normal: '普通', advanced: '高级', rare: '稀有', legendary: '传说' };
+
         function renderCharacters(chars) {
             const list = document.getElementById('charList');
             if (chars.length === 0) {
@@ -70,12 +80,28 @@
             const typeNames = { 1: '战士', 2: '弓箭手', 3: '法师' };
             const typeClass = { 1: 'warrior', 2: 'archer', 3: 'mage' };
 
-            list.innerHTML = chars.map(c => `
+            list.innerHTML = chars.map(c => {
+                const rarity = c.rarity || 'normal';
+                const bonuses = [];
+                if (c.attack_bonus > 0) bonuses.push(`攻击+${c.attack_bonus}`);
+                if (c.defense_bonus > 0) bonuses.push(`防御+${c.defense_bonus}`);
+                if (c.recovery_bonus > 0) bonuses.push(`回复+${c.recovery_bonus}`);
+                if (c.hp_bonus > 0) bonuses.push(`血量+${c.hp_bonus}`);
+                if (c.operation_time_bonus > 0) bonuses.push(`时长+${c.operation_time_bonus}ms`);
+                const bonusHtml = bonuses.length > 0
+                    ? `<div class="char-bonus">${bonuses.map(b => `<span class="bonus-item">${b}</span>`).join('')}</div>`
+                    : '';
+                const boundSkillHtml = (rarity === 'legendary' && c.bound_skill_name)
+                    ? `<div class="bound-skill">专属: ${escapeHtml(c.bound_skill_name)}</div>`
+                    : '';
+                return `
                 <div class="char-card ${typeClass[c.character_type_id] || ''}">
-                    <div class="char-card-name">${escapeHtml(c.character_name)}</div>
+                    <div class="char-card-name">${escapeHtml(c.character_name)} <span class="rarity-badge rarity-${rarity}">${rarityNames[rarity]}</span></div>
                     <div class="char-card-type">${typeNames[c.character_type_id] || ''}</div>
-                </div>
-            `).join('');
+                    ${bonusHtml}
+                    ${boundSkillHtml}
+                </div>`;
+            }).join('');
         }
 
         loadCharacters();

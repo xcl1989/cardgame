@@ -215,6 +215,7 @@ def update_existing_team(
     req: TeamUpdateRequest,
     user_record=Depends(get_current_user_with_record),
 ):
+    logger.info(f"Update team request: team_id={team_id}, body={req}")
     team = get_team(team_id)
     if not team or team["user_id"] != user_record[1]["id"]:
         raise HTTPException(

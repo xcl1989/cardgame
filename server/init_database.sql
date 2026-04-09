@@ -36,9 +36,17 @@ CREATE TABLE IF NOT EXISTS player_characters (
     user_id VARCHAR(36) NOT NULL,
     character_type_id INT NOT NULL,
     character_name VARCHAR(50) NOT NULL,
+    rarity ENUM('normal', 'advanced', 'rare', 'legendary') DEFAULT 'normal',
+    attack_bonus INT DEFAULT 0,
+    defense_bonus INT DEFAULT 0,
+    recovery_bonus INT DEFAULT 0,
+    hp_bonus INT DEFAULT 0,
+    operation_time_bonus INT DEFAULT 0,
+    bound_passive_skill_id INT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (character_type_id) REFERENCES character_types(id)
+    FOREIGN KEY (character_type_id) REFERENCES character_types(id),
+    FOREIGN KEY (bound_passive_skill_id) REFERENCES skills(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 技能表
@@ -146,7 +154,11 @@ INSERT INTO skills (id, name, skill_type, description, effect_value) VALUES
 (8, '法师专精', '主动', '将当前棋盘中的无效珠子变成黄色珠子', '0'),
 (9, '回复', '主动', '回复最大血量50%的生命值', '0.5'),
 (10, '暴击', '主动', '本回合红色珠子基础攻击力变为3倍', '3'),
-(11, '精确打击', '主动', '本回合敌人防御下降5', '-5');
+(11, '精确打击', '主动', '本回合敌人防御下降5', '-5'),
+(12, '法天象地', '被动', '总血量翻倍', '2'),
+(13, '三头六臂', '被动', '操作时长翻倍', '2'),
+(14, '苟延残喘', '被动', '每回合随机将1-2颗无效珠子转变为绿色回复珠子', '0'),
+(15, '神机妙算', '被动', '降低无效珠子生成概率至12%，其他珠子概率变为22%', '0');
 
 -- 技能-角色关联 (0=所有职业)
 INSERT INTO skill_character_map (skill_id, character_type) VALUES
@@ -156,6 +168,15 @@ INSERT INTO skill_character_map (skill_id, character_type) VALUES
 (6, 1), (9, 1),
 (7, 2), (10, 2),
 (8, 3), (9, 3);
+
+-- 玩家角色 (普通角色无加成，高级/稀有/传说有属性加成)
+INSERT INTO player_characters (id, user_id, character_type_id, character_name, rarity, attack_bonus, defense_bonus, recovery_bonus, hp_bonus, operation_time_bonus, bound_passive_skill_id) VALUES
+(1, 'a855635a-322e-11f1-9cbd-df2001a53a33', 1, '阿基米德', 'normal', 0, 0, 0, 0, 0, NULL),
+(2, 'a855635a-322e-11f1-9cbd-df2001a53a33', 1, '帕利卡', 'normal', 0, 0, 0, 0, 0, NULL),
+(3, 'a855635a-322e-11f1-9cbd-df2001a53a33', 2, '古斯特', 'normal', 0, 0, 0, 0, 0, NULL),
+(4, 'a855635a-322e-11f1-9cbd-df2001a53a33', 2, '莱昂拉多', 'advanced', 1, 0, 0, 0, 0, NULL),
+(5, 'a855635a-322e-11f1-9cbd-df2001a53a33', 3, '加百列', 'rare', 1, 0, 1, 0, 0, NULL),
+(6, 'a855635a-322e-11f1-9cbd-df2001a53a33', 3, '克洛', 'legendary', 2, 1, 0, 5, 0, 5);
 
 -- 关卡
 INSERT INTO levels (id, level_name, level_order) VALUES
@@ -178,15 +199,6 @@ INSERT INTO level_enemy_map (level_id, enemy_id, slot_position) VALUES
 -- 测试用户
 INSERT INTO users (id, username, password, nickname, max_teams) VALUES
 ('a855635a-322e-11f1-9cbd-df2001a53a33', 'xcl1989', '123456', 'gamemaster', 2);
-
--- 玩家角色
-INSERT INTO player_characters (id, user_id, character_type_id, character_name) VALUES
-(1, 'a855635a-322e-11f1-9cbd-df2001a53a33', 1, '阿基米德'),
-(2, 'a855635a-322e-11f1-9cbd-df2001a53a33', 1, '帕利卡'),
-(3, 'a855635a-322e-11f1-9cbd-df2001a53a33', 2, '古斯特'),
-(4, 'a855635a-322e-11f1-9cbd-df2001a53a33', 2, '莱昂拉多'),
-(5, 'a855635a-322e-11f1-9cbd-df2001a53a33', 3, '加百列'),
-(6, 'a855635a-322e-11f1-9cbd-df2001a53a33', 3, '克洛');
 
 -- 队伍
 INSERT INTO teams (id, user_id, team_name) VALUES

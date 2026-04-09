@@ -71,6 +71,11 @@
         .team-char.empty { border-color: #444; background: #333; }
         .team-char-name { font-size: 11px; color: #fff; text-align: center; padding: 0 3px; }
         .team-char-type { font-size: 9px; color: #aaa; }
+        .rarity-badge { font-size: 8px; padding: 0 4px; border-radius: 3px; }
+        .rarity-normal { background: #555; color: #aaa; }
+        .rarity-advanced { background: #2a6e2a; color: #8f8; }
+        .rarity-rare { background: #2a2a6e; color: #88f; }
+        .rarity-legendary { background: #6e4a2a; color: #fa4; }
         .empty-slot { color: #666; font-size: 20px; }
         .modal-overlay {
             display: none;
@@ -178,6 +183,7 @@
 
             const typeNames = { 1: '战士', 2: '弓箭手', 3: '法师' };
             const typeClass = { 1: 'warrior', 2: 'archer', 3: 'mage' };
+            const rarityNames = { normal: '普通', advanced: '高级', rare: '稀有', legendary: '传说' };
 
             list.innerHTML = teams.map(t => `
                 <div class="team-card">
@@ -189,9 +195,11 @@
                         ${[0,1,2,3].map(i => {
                             const c = t.characters.find(ch => ch.slot_position === i);
                             if (c) {
+                                const rarity = c.rarity || 'normal';
                                 return `<div class="team-char ${typeClass[c.character_type_id] || ''}">
                                     <div class="team-char-name">${escapeHtml(c.character_name)}</div>
                                     <div class="team-char-type">${typeNames[c.character_type_id] || ''}</div>
+                                    <span class="rarity-badge rarity-${rarity}">${rarityNames[rarity]}</span>
                                 </div>`;
                             } else {
                                 return `<div class="team-char empty"><span class="empty-slot">+</span></div>`;
