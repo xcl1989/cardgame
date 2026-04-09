@@ -4,19 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>卡牌消除 - 主界面</title>
+    <link rel="stylesheet" href="common/common.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background: #1a1a2e;
-            font-family: Arial, sans-serif;
-        }
         .main-container {
             width: 100%;
             height: 100%;
-            max-width: 375px;
             max-width: 375px;
             margin: 0 auto;
             background: #2a2a4e;
@@ -146,44 +138,13 @@
         </div>
     </div>
 
+    <script src="common/auth.js"></script>
     <script>
-        const API_BASE = '/api';
-
-        async function checkAuth() {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                window.location.href = 'login.html';
-                return false;
+        async function init() {
+            const authData = await checkAuth();
+            if (authData) {
+                document.getElementById('username').textContent = authData.username;
             }
-            try {
-                const res = await fetch(`${API_BASE}/verify`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!res.ok) throw new Error('Token invalid');
-                const data = await res.json();
-                document.getElementById('username').textContent = data.username;
-                return true;
-            } catch (e) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('username');
-                window.location.href = 'login.html';
-                return false;
-            }
-        }
-
-        async function logout() {
-            const token = localStorage.getItem('token');
-            if (token) {
-                try {
-                    await fetch(`${API_BASE}/logout`, {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                } catch (e) {}
-            }
-            localStorage.removeItem('token');
-            localStorage.removeItem('username');
-            window.location.href = 'login.html';
         }
 
         function showCharacters() {
@@ -198,7 +159,7 @@
             window.location.href = 'level-select.html';
         }
 
-        checkAuth();
+        init();
     </script>
 </body>
 </html>

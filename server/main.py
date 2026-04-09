@@ -10,6 +10,7 @@ from database import (
     get_user_by_username,
     get_user_characters,
     get_user_teams,
+    get_team,
     create_team,
     update_team_characters,
     delete_team,
@@ -198,7 +199,7 @@ def create_new_team(
     return {"id": team_id, "team_name": req.team_name}
 
 
-@app.put("/teams/{team_id}")
+@app.post("/teams/{team_id}/update")
 def update_existing_team(
     team_id: int, req: TeamUpdateRequest, authorization: Optional[str] = Header(None)
 ):
@@ -209,13 +210,22 @@ def update_existing_team(
     if not data:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
+    user = get_user_by_username(data.username)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    team = get_team(team_id)
+    if not team or team["user_id"] != user["id"]:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to modify this team"
+        )
+
     if req.characters:
         update_team_characters(team_id, req.characters)
 
     return {"message": "Team updated"}
 
 
-@app.delete("/teams/{team_id}")
+@app.post("/teams/{team_id}/delete")
 def delete_existing_team(team_id: int, authorization: Optional[str] = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing token")
@@ -223,6 +233,15 @@ def delete_existing_team(team_id: int, authorization: Optional[str] = Header(Non
     data = verify_token(token)
     if not data:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    user = get_user_by_username(data.username)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    team = get_team(team_id)
+    if not team or team["user_id"] != user["id"]:
+        raise HTTPException(
+            status_code=403, detail="Not authorized to delete this team"
+        )
 
     delete_team(team_id)
     return {"message": "Team deleted"}

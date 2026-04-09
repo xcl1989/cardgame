@@ -4,51 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>编辑队伍</title>
+    <link rel="stylesheet" href="common/common.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background: #1a1a2e;
-        }
-        .container {
-            width: 100%;
-            height: 100%;
-            max-width: 375px;
-            margin: 0 auto;
-            background: #2a2a4e;
-            display: flex;
-            flex-direction: column;
-        }
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 15px;
-            background: #1a1a2e;
-            color: #fff;
-        }
-        .back-btn {
-            background: none;
-            border: 1px solid #666;
-            color: #fff;
-            padding: 8px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
+        .page-header { gap: 10px; }
+        .header-title { flex: 1; text-align: center; }
         .save-btn {
-            background: #44ff44;
+            min-width: 60px;
+            background: #44aa44;
             border: none;
-            color: #000;
-            padding: 8px 15px;
-            border-radius: 5px;
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 8px;
             cursor: pointer;
-        }
-        .header-title {
-            font-size: 18px;
+            font-size: 14px;
             font-weight: bold;
         }
+        .save-btn:active { transform: scale(0.95); }
         .team-section {
             padding: 15px;
             background: #252545;
@@ -318,7 +289,7 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
+        <div class="page-header">
             <button class="back-btn" onclick="goBack()">返回</button>
             <span class="header-title" id="pageTitle">编辑队伍</span>
             <button class="save-btn" onclick="saveTeam()">保存</button>
@@ -344,12 +315,14 @@
     </div>
 
 
+    <script src="common/auth.js"></script>
+    <script src="common/utils.js"></script>
     <script>
-        const API_BASE = '/api';
         let teamId = null;
         let teamData = null;
         let allChars = [];
         let selectedSlot = null;
+        let currentSkillChar = null;
         let skillsCache = {};
         let activeSkillsCache = {};
         let currentSkillTab = 'passive';
@@ -359,20 +332,19 @@
         }
 
         async function loadData() {
-            const token = localStorage.getItem('token');
             const params = new URLSearchParams(window.location.search);
             teamId = params.get('team_id');
 
-            const headers = { 'Authorization': `Bearer ${token}` };
-
             const [teamsRes, charsRes] = await Promise.all([
-                teamId ? fetch(`${API_BASE}/teams`, { headers }) : Promise.resolve(null),
-                fetch(`${API_BASE}/characters`, { headers })
+                teamId ? apiFetch('/teams') : Promise.resolve(null),
+                apiFetch('/characters')
             ]);
 
-            allChars = await charsRes.json();
+            if (charsRes && charsRes.ok) {
+                allChars = await charsRes.json();
+            }
 
-            if (teamId) {
+            if (teamId && teamsRes && teamsRes.ok) {
                 const teams = await teamsRes.json();
                 teamData = teams.find(t => t.id == teamId);
                 if (teamData) {
@@ -392,27 +364,17 @@
         }
 
         async function loadSkillsForType(characterTypeId) {
-            if (skillsCache[characterTypeId]) {
-                return skillsCache[characterTypeId];
-            }
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${API_BASE}/skills/${characterTypeId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const skills = await res.json();
+            if (skillsCache[characterTypeId]) return skillsCache[characterTypeId];
+            const res = await apiFetch(`/skills/${characterTypeId}`);
+            const skills = res && res.ok ? await res.json() : [];
             skillsCache[characterTypeId] = skills;
             return skills;
         }
 
         async function loadActiveSkillsForType(characterTypeId) {
-            if (activeSkillsCache[characterTypeId]) {
-                return activeSkillsCache[characterTypeId];
-            }
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${API_BASE}/skills/${characterTypeId}/active`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const skills = await res.json();
+            if (activeSkillsCache[characterTypeId]) return activeSkillsCache[characterTypeId];
+            const res = await apiFetch(`/skills/${characterTypeId}/active`);
+            const skills = res && res.ok ? await res.json() : [];
             activeSkillsCache[characterTypeId] = skills;
             return skills;
         }
@@ -434,10 +396,10 @@
                                 onclick="selectSlotChar(${i})" data-slot="${i}">
                                 <button class="slot-remove" onclick="event.stopPropagation(); removeFromSlot(${i})">×</button>
                                 <div class="slot-num">位置${i+1}</div>
-                                <div class="slot-char-name">${c.character_name}</div>
-                                <div class="slot-char-type">${typeNames[c.character_type_id]}</div>
-                                <div class="slot-skill">被动: ${passiveSkillName || '无'}</div>
-                                <div class="slot-skill">主动: ${activeSkillName || '无'}</div>
+                                <div class="slot-char-name">${escapeHtml(c.character_name)}</div>
+                                <div class="slot-char-type">${typeNames[c.character_type_id] || ''}</div>
+                                <div class="slot-skill">被动: ${passiveSkillName ? escapeHtml(passiveSkillName) : '无'}</div>
+                                <div class="slot-skill">主动: ${activeSkillName ? escapeHtml(activeSkillName) : '无'}</div>
                             </div>`;
                 } else {
                     return `<div class="team-slot ${selectedSlot === i ? 'selected' : ''}"
@@ -460,8 +422,8 @@
                 const isUsed = usedCharIds.includes(c.id);
                 return `<div class="char-card ${typeClass[c.character_type_id]} ${isUsed ? 'used' : ''}"
                             onclick="${isUsed ? '' : `addToSlot(${c.id})`}">
-                            <div class="char-name">${c.character_name}</div>
-                            <div class="char-type">${typeNames[c.character_type_id]}</div>
+                            <div class="char-name">${escapeHtml(c.character_name)}</div>
+                            <div class="char-type">${typeNames[c.character_type_id] || ''}</div>
                         </div>`;
             }).join('');
 
@@ -508,8 +470,8 @@
 
             const skillsHtml = skills.length > 0 ? skills.map(s => `
                 <div class="skill-item ${selectedId == s.id ? 'selected' : ''}" onclick="selectSkill(${s.id})">
-                    <div class="skill-name">${s.name}</div>
-                    <div class="skill-desc">${s.description}</div>
+                    <div class="skill-name">${escapeHtml(s.name)}</div>
+                    <div class="skill-desc">${escapeHtml(s.description)}</div>
                 </div>
             `).join('') : '<div style="color:#888;text-align:center;padding:20px;">暂无可用技能</div>';
 
@@ -588,7 +550,6 @@
         }
 
         async function saveTeam() {
-            const token = localStorage.getItem('token');
             const teamName = document.getElementById('teamName').value.trim();
             if (!teamName) {
                 alert('请输入队伍名称');
@@ -600,7 +561,6 @@
                 return;
             }
 
-            // 检查连锁闪电只能有一个角色装备
             let chainLightningCount = 0;
             for (const c of teamData.characters) {
                 const passiveSkills = skillsCache[c.character_type_id] || [];
@@ -616,34 +576,30 @@
                 return;
             }
 
-            const headers = {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            };
+            const headers = { 'Content-Type': 'application/json' };
 
             try {
                 if (teamId) {
-                    await fetch(`${API_BASE}/teams/${teamId}`, {
-                        method: 'PUT',
+                    await apiFetch(`/teams/${teamId}/update`, {
+                        method: 'POST',
                         headers,
-                        body: JSON.stringify({
-                            team_name: teamName,
-                            characters: teamData.characters
-                        })
+                        body: JSON.stringify({ team_name: teamName, characters: teamData.characters })
                     });
                 } else {
-                    const res = await fetch(`${API_BASE}/teams`, {
+                    const res = await apiFetch('/teams', {
                         method: 'POST',
                         headers,
                         body: JSON.stringify({ team_name: teamName })
                     });
-                    const data = await res.json();
-                    teamId = data.id;
-                    await fetch(`${API_BASE}/teams/${teamId}`, {
-                        method: 'PUT',
-                        headers,
-                        body: JSON.stringify({ characters: teamData.characters })
-                    });
+                    if (res && res.ok) {
+                        const data = await res.json();
+                        teamId = data.id;
+                        await apiFetch(`/teams/${teamId}/update`, {
+                            method: 'POST',
+                            headers,
+                            body: JSON.stringify({ characters: teamData.characters })
+                        });
+                    }
                 }
                 window.location.href = 'team.html';
             } catch (e) {

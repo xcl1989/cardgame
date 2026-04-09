@@ -4,67 +4,52 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>选择队伍</title>
+    <link rel="stylesheet" href="common/common.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background: #1a1a2e;
-            font-family: Arial, sans-serif;
-        }
-        .container {
-            width: 100%;
-            height: 100%;
-            max-width: 375px;
-            margin: 0 auto;
-            background: #2a2a4e;
-            display: flex;
-            flex-direction: column;
-        }
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 15px;
-            background: #1a1a2e;
-            color: #fff;
-        }
-        .back-btn {
-            background: none;
-            border: 1px solid #666;
-            color: #fff;
-            padding: 8px 15px;
-            border-radius: 5px;
-            cursor: pointer;
+        .page-header {
+            padding: 12px 15px;
+            gap: 10px;
         }
         .header-title {
-            font-size: 18px;
-            font-weight: bold;
+            flex: 1;
+            text-align: center;
+            font-size: 17px;
+            letter-spacing: 1px;
+        }
+        .back-btn {
+            min-width: 60px;
+            border-radius: 8px;
+            font-size: 14px;
+            padding: 8px 14px;
         }
         .confirm-btn {
+            min-width: 60px;
             background: #44dd88;
             border: none;
             color: #fff;
-            padding: 8px 15px;
-            border-radius: 5px;
+            padding: 8px 14px;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
+            font-size: 14px;
         }
         .confirm-btn:disabled {
-            background: #666;
+            background: #555;
+            color: #888;
             cursor: not-allowed;
         }
         .level-info {
-            padding: 15px;
+            padding: 12px 20px;
             background: #252545;
             color: #fff;
             text-align: center;
+            border-top: 1px solid #3a3a5e;
+            border-bottom: 1px solid #3a3a5e;
         }
         .level-name {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
         }
         .level-detail {
             font-size: 12px;
@@ -77,12 +62,12 @@
         }
         .team-card {
             background: #3a3a5e;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
             cursor: pointer;
             border: 2px solid transparent;
-            transition: border-color 0.2s;
+            transition: border-color 0.2s, background 0.2s;
         }
         .team-card:hover {
             border-color: #8a8aae;
@@ -95,17 +80,18 @@
             font-size: 16px;
             font-weight: bold;
             color: #fff;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
         .team-chars {
             display: flex;
-            gap: 8px;
+            gap: 10px;
+            justify-content: center;
         }
         .team-char {
-            width: 60px;
-            height: 70px;
+            width: 62px;
+            height: 72px;
             background: #252545;
-            border-radius: 8px;
+            border-radius: 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -139,7 +125,7 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
+        <div class="page-header">
             <button class="back-btn" onclick="goBack()">返回</button>
             <span class="header-title">选择队伍</span>
             <button class="confirm-btn" id="confirmBtn" onclick="confirmSelection()" disabled>确认</button>
@@ -153,18 +139,14 @@
         </div>
     </div>
 
+    <script src="common/auth.js"></script>
+    <script src="common/utils.js"></script>
     <script>
-        const API_BASE = '/api';
         let selectedTeamId = null;
         let levelId = null;
 
         function goBack() {
             window.location.href = 'level-select.html';
-        }
-
-        function getQueryParam(param) {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get(param);
         }
 
         async function loadLevel() {
@@ -175,33 +157,28 @@
                 return;
             }
 
-            const token = localStorage.getItem('token');
             try {
-                const res = await fetch(`${API_BASE}/levels/${levelId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (res.ok) {
+                const res = await apiFetch(`/levels/${levelId}`);
+                if (res && res.ok) {
                     const level = await res.json();
-                    document.getElementById('levelName').textContent = level.level_name;
-                    document.getElementById('levelDetail').textContent = `敌人: ${level.enemy_name} | HP: ${level.enemy_hp}`;
+                    document.getElementById('levelName').textContent = level.level_name || '未知关卡';
+                    const enemies = level.enemies || [];
+                    const boss = enemies.length > 0 ? enemies[enemies.length - 1] : {};
+                    document.getElementById('levelDetail').textContent = `BOSS: ${boss.enemy_name || '未知'} | HP: ${boss.hp || '--'}`;
+                } else {
+                    document.getElementById('levelName').textContent = '关卡信息加载失败';
+                    document.getElementById('levelDetail').textContent = '';
                 }
             } catch (e) {
-                console.error('Failed to load level');
+                console.error('Failed to load level', e);
+                document.getElementById('levelName').textContent = '关卡信息加载失败';
             }
         }
 
         async function loadTeams() {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                window.location.href = 'login.html';
-                return;
-            }
-
             try {
-                const res = await fetch(`${API_BASE}/teams`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (res.ok) {
+                const res = await apiFetch('/teams');
+                if (res && res.ok) {
                     const teams = await res.json();
                     renderTeams(teams);
                 } else {
@@ -225,14 +202,14 @@
 
             list.innerHTML = teams.map(t => `
                 <div class="team-card" id="team-${t.id}" onclick="selectTeam(${t.id})">
-                    <div class="team-name">${t.team_name}</div>
+                    <div class="team-name">${escapeHtml(t.team_name)}</div>
                     <div class="team-chars">
                         ${[0,1,2,3].map(i => {
                             const c = t.characters.find(ch => ch.slot_position === i);
                             if (c) {
-                                return `<div class="team-char ${typeClass[c.character_type_id]}">
-                                    <div class="team-char-name">${c.character_name}</div>
-                                    <div class="team-char-type">${typeNames[c.character_type_id]}</div>
+                                return `<div class="team-char ${typeClass[c.character_type_id] || ''}">
+                                    <div class="team-char-name">${escapeHtml(c.character_name)}</div>
+                                    <div class="team-char-type">${typeNames[c.character_type_id] || ''}</div>
                                 </div>`;
                             } else {
                                 return `<div class="team-char empty"><span class="empty-slot">+</span></div>`;

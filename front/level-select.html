@@ -4,43 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>选择关卡</title>
+    <link rel="stylesheet" href="common/common.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background: #1a1a2e;
-            font-family: Arial, sans-serif;
-        }
-        .container {
-            width: 100%;
-            height: 100%;
-            max-width: 375px;
-            margin: 0 auto;
-            background: #2a2a4e;
-            display: flex;
-            flex-direction: column;
-        }
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 15px;
-            background: #1a1a2e;
-            color: #fff;
-        }
-        .back-btn {
-            background: none;
-            border: 1px solid #666;
-            color: #fff;
-            padding: 8px 15px;
-            border-radius: 5px;
-            cursor: pointer;
+        .page-header {
+            padding: 12px 15px;
+            gap: 10px;
         }
         .header-title {
-            font-size: 18px;
-            font-weight: bold;
+            flex: 1;
+            text-align: center;
+            font-size: 17px;
+            letter-spacing: 1px;
+        }
+        .back-btn {
+            min-width: 60px;
+            border-radius: 8px;
+            font-size: 14px;
+            padding: 8px 14px;
+        }
+        .header-spacer {
+            min-width: 60px;
         }
         .level-list {
             flex: 1;
@@ -97,35 +80,27 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
+        <div class="page-header">
             <button class="back-btn" onclick="goBack()">返回</button>
             <span class="header-title">选择关卡</span>
-            <div style="width: 60px;"></div>
+            <div class="header-spacer"></div>
         </div>
         <div class="level-list" id="levelList">
             <div class="empty-msg">加载中...</div>
         </div>
     </div>
 
+    <script src="common/auth.js"></script>
+    <script src="common/utils.js"></script>
     <script>
-        const API_BASE = '/api';
-
         function goBack() {
             window.location.href = 'main.html';
         }
 
         async function loadLevels() {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                window.location.href = 'login.html';
-                return;
-            }
-
             try {
-                const res = await fetch(`${API_BASE}/levels`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (res.ok) {
+                const res = await apiFetch('/levels');
+                if (res && res.ok) {
                     const levels = await res.json();
                     renderLevels(levels);
                 } else {
@@ -146,9 +121,9 @@
 
             list.innerHTML = levels.map(level => `
                 <div class="level-card ${level.is_unlocked ? '' : 'locked'} ${level.is_completed ? 'completed' : ''}" onclick="${level.is_unlocked ? `selectLevel(${level.id})` : ''}">
-                    <div class="level-name">${level.level_name} ${level.is_completed ? '✓' : ''}</div>
+                    <div class="level-name">${escapeHtml(level.level_name)} ${level.is_completed ? '✓' : ''}</div>
                     <div class="level-info">
-                        <span>BOSS: ${level.enemy_name}</span>
+                        <span>BOSS: ${escapeHtml(level.enemy_name)}</span>
                     </div>
                     <div class="level-info">
                         <span>HP: ${level.enemy_hp}</span>

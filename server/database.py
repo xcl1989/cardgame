@@ -122,6 +122,18 @@ def get_user_teams(user_id: str) -> list:
             conn.close()
 
 
+def get_team(team_id: int) -> Optional[Dict[str, Any]]:
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM teams WHERE id=%s", (team_id,))
+            return cursor.fetchone()
+    finally:
+        if conn:
+            conn.close()
+
+
 def create_team(user_id: str, team_name: str) -> int:
     conn = None
     try:
