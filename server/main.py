@@ -306,13 +306,16 @@ def get_all_levels(authorization: Optional[str] = Header(None)):
         {
             "id": level["id"],
             "level_name": level["level_name"],
-            "enemy_name": level["enemies"][0]["enemy_name"]
+            "enemy_name": level["enemies"][-1]["enemy_name"]
             if level.get("enemies")
             else "敌人",
-            "enemy_hp": sum(e["hp"] for e in level.get("enemies", [])),
-            "enemy_attack": level["enemies"][0]["attack"]
+            "enemy_hp": level["enemies"][-1]["hp"] if level.get("enemies") else 0,
+            "enemy_attack": level["enemies"][-1]["attack"]
             if level.get("enemies")
             else 20,
+            "enemy_defense": level["enemies"][-1]["defense"]
+            if level.get("enemies")
+            else 0,
             "is_unlocked": True,
             "is_completed": level["id"] in completed_levels,
         }

@@ -1,8 +1,8 @@
 [English](./README_en.md) | 中文
 
-# 卡牌消除游戏 (Card Game)
+# 卡牌三消游戏 (Card Match 3)
 
-基于 HTML5 Canvas 和原生 JavaScript 的卡牌消除对战游戏。
+基于 HTML5 Canvas 和原生 JavaScript 的卡牌三消对战游戏。
 
 ## 截图
 

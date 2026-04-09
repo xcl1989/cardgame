@@ -148,8 +148,12 @@
                 <div class="level-card ${level.is_unlocked ? '' : 'locked'} ${level.is_completed ? 'completed' : ''}" onclick="${level.is_unlocked ? `selectLevel(${level.id})` : ''}">
                     <div class="level-name">${level.level_name} ${level.is_completed ? '✓' : ''}</div>
                     <div class="level-info">
-                        <span>敌人: ${level.enemy_name}</span>
+                        <span>BOSS: ${level.enemy_name}</span>
+                    </div>
+                    <div class="level-info">
                         <span>HP: ${level.enemy_hp}</span>
+                        <span>攻击力: ${level.enemy_attack}</span>
+                        <span>防御力: ${level.enemy_defense}</span>
                     </div>
                     <div class="level-status ${level.is_completed ? '' : 'locked'}">${level.is_completed ? '已通关' : '未通关'}</div>
                 </div>

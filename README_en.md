@@ -1,8 +1,8 @@
 English | [中文](./README.md)
 
-# Card Game
+# Card Match 3
 
-A vanilla JavaScript card-matching battle game using HTML5 Canvas.
+A vanilla JavaScript card match-3 battle game using HTML5 Canvas.
 
 ## Screenshots
 

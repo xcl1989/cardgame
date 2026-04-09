@@ -1,7 +1,7 @@
 {
   "name": "cardgame",
   "version": "1.0.0",
-  "description": "卡牌消除游戏",
+  "description": "卡牌三消游戏",
   "type": "module",
   "scripts": {
     "dev": "vite",
