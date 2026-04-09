@@ -168,6 +168,7 @@
                 const data = await res.json();
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('username', data.username);
+                localStorage.setItem('nickname', data.nickname);
                 localStorage.setItem('max_teams', data.max_teams);
                 window.location.href = 'main.html';
             } catch (e) {

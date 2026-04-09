@@ -14,11 +14,13 @@ async function checkAuth() {
         const data = await res.json();
         return data;
     } catch (e) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('username');
-        window.location.href = 'login.html';
-        return false;
-    }
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    localStorage.removeItem('nickname');
+    localStorage.removeItem('max_teams');
+    window.location.href = 'login.html';
+    return false;
+}
 }
 
 async function logout() {

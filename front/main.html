@@ -118,7 +118,7 @@
 <body>
     <div class="main-container">
         <div class="header">
-            <span class="user-info" id="username"></span>
+            <span class="user-info" id="nickname"></span>
             <span class="header-title">卡牌消除</span>
             <button class="logout-btn" onclick="logout()">退出</button>
         </div>
@@ -143,7 +143,7 @@
         async function init() {
             const authData = await checkAuth();
             if (authData) {
-                document.getElementById('username').textContent = authData.username;
+                document.getElementById('nickname').textContent = authData.nickname;
             }
         }
 

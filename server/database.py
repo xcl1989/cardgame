@@ -1,71 +1,88 @@
-import pymysql
+import os
+from contextlib import contextmanager
 from typing import Optional, List, Dict, Any
 
+import pymysql
+from dbutils.pooled_db import PooledDB
+from dotenv import load_dotenv
+from passlib.hash import bcrypt
 
-MYSQL_HOST = "127.0.0.1"
-MYSQL_PORT = 3306
-MYSQL_USER = "root"
-MYSQL_PASSWORD = "12345678"
-MYSQL_DB = "Game"
+load_dotenv()
+
+MYSQL_HOST = os.getenv("MYSQL_HOST", "127.0.0.1")
+MYSQL_PORT = int(os.getenv("MYSQL_PORT", "3306"))
+MYSQL_USER = os.getenv("MYSQL_USER", "root")
+MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "")
+MYSQL_DB = os.getenv("MYSQL_DB", "Game")
+
+_pool = PooledDB(
+    pymysql,
+    maxconnections=10,
+    host=MYSQL_HOST,
+    port=MYSQL_PORT,
+    user=MYSQL_USER,
+    password=MYSQL_PASSWORD,
+    database=MYSQL_DB,
+    cursorclass=pymysql.cursors.DictCursor,
+    autocommit=False,
+)
 
 
-def get_db_connection():
-    return pymysql.connect(
-        host=MYSQL_HOST,
-        port=MYSQL_PORT,
-        user=MYSQL_USER,
-        password=MYSQL_PASSWORD,
-        database=MYSQL_DB,
-        cursorclass=pymysql.cursors.DictCursor,
-    )
+@contextmanager
+def get_db():
+    conn = _pool.connection()
+    try:
+        yield conn
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def verify_user(username: str, password: str) -> Optional[Dict[str, Any]]:
-    conn = None
-    try:
-        conn = get_db_connection()
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
-                "SELECT username, max_teams FROM users WHERE username=%s AND password=%s",
-                (username, password),
+                "SELECT id, username, nickname, password, max_teams FROM users WHERE username=%s",
+                (username,),
             )
-            return cursor.fetchone()
-    finally:
-        if conn:
-            conn.close()
+            user = cursor.fetchone()
+            if not user:
+                return None
+            if not bcrypt.verify(password, user["password"]):
+                return None
+            return {
+                "id": user["id"],
+                "username": user["username"],
+                "nickname": user["nickname"],
+                "max_teams": user["max_teams"],
+            }
+
+
+def hash_password(password: str) -> str:
+    return bcrypt.hash(password)
 
 
 def get_user_by_username(username: str) -> Optional[Dict[str, Any]]:
-    conn = None
-    try:
-        conn = get_db_connection()
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute("SELECT * FROM users WHERE username=%s", (username,))
             return cursor.fetchone()
-    finally:
-        if conn:
-            conn.close()
 
 
 def get_user_characters(user_id: str) -> list:
-    conn = None
-    try:
-        conn = get_db_connection()
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 "SELECT id, character_type_id, character_name, created_at FROM player_characters WHERE user_id=%s ORDER BY created_at",
                 (user_id,),
             )
             return list(cursor.fetchall())
-    finally:
-        if conn:
-            conn.close()
 
 
 def get_user_teams(user_id: str) -> list:
-    conn = None
-    try:
-        conn = get_db_connection()
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 """SELECT t.*, tcm.slot_position, tcm.character_id, tcm.passive_skill_id, tcm.active_skill_id,
@@ -84,7 +101,7 @@ def get_user_teams(user_id: str) -> list:
             )
             rows = cursor.fetchall()
 
-            teams_map = {}
+            teams_map: Dict[int, dict] = {}
             for row in rows:
                 team_id = row["id"]
                 if team_id not in teams_map:
@@ -117,27 +134,17 @@ def get_user_teams(user_id: str) -> list:
                     }
                     teams_map[team_id]["characters"].append(char)
             return list(teams_map.values())
-    finally:
-        if conn:
-            conn.close()
 
 
 def get_team(team_id: int) -> Optional[Dict[str, Any]]:
-    conn = None
-    try:
-        conn = get_db_connection()
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute("SELECT * FROM teams WHERE id=%s", (team_id,))
             return cursor.fetchone()
-    finally:
-        if conn:
-            conn.close()
 
 
 def create_team(user_id: str, team_name: str) -> int:
-    conn = None
-    try:
-        conn = get_db_connection()
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 "INSERT INTO teams (user_id, team_name) VALUES (%s, %s)",
@@ -145,15 +152,10 @@ def create_team(user_id: str, team_name: str) -> int:
             )
             conn.commit()
             return cursor.lastrowid
-    finally:
-        if conn:
-            conn.close()
 
 
 def update_team_characters(team_id: int, characters: list):
-    conn = None
-    try:
-        conn = get_db_connection()
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 "DELETE FROM team_character_map WHERE team_id=%s", (team_id,)
@@ -171,66 +173,41 @@ def update_team_characters(team_id: int, characters: list):
                     ),
                 )
             conn.commit()
-    finally:
-        if conn:
-            conn.close()
 
 
 def delete_team(team_id: int):
-    conn = None
-    try:
-        conn = get_db_connection()
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 "DELETE FROM team_character_map WHERE team_id=%s", (team_id,)
             )
             cursor.execute("DELETE FROM teams WHERE id=%s", (team_id,))
             conn.commit()
-    finally:
-        if conn:
-            conn.close()
 
 
 def get_character_types() -> list:
-    conn = None
-    try:
-        conn = get_db_connection()
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute("SELECT * FROM character_types")
             return list(cursor.fetchall())
-    finally:
-        if conn:
-            conn.close()
 
 
 def get_skills() -> list:
-    conn = None
-    try:
-        conn = get_db_connection()
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute("SELECT * FROM skills")
             return list(cursor.fetchall())
-    finally:
-        if conn:
-            conn.close()
 
 
 def get_skill(skill_id: int) -> Optional[Dict[str, Any]]:
-    conn = None
-    try:
-        conn = get_db_connection()
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute("SELECT * FROM skills WHERE id=%s", (skill_id,))
             return cursor.fetchone()
-    finally:
-        if conn:
-            conn.close()
 
 
 def get_skills_by_character_type(character_type_id: int) -> list:
-    conn = None
-    try:
-        conn = get_db_connection()
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 """SELECT s.* FROM skills s
@@ -239,15 +216,10 @@ def get_skills_by_character_type(character_type_id: int) -> list:
                 (str(character_type_id),),
             )
             return list(cursor.fetchall())
-    finally:
-        if conn:
-            conn.close()
 
 
 def get_active_skills_by_character_type(character_type_id: int) -> list:
-    conn = None
-    try:
-        conn = get_db_connection()
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 """SELECT s.* FROM skills s
@@ -256,15 +228,10 @@ def get_active_skills_by_character_type(character_type_id: int) -> list:
                 (str(character_type_id),),
             )
             return list(cursor.fetchall())
-    finally:
-        if conn:
-            conn.close()
 
 
 def get_levels() -> list:
-    conn = None
-    try:
-        conn = get_db_connection()
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 """SELECT l.*, lem.slot_position, lem.enemy_id, e.enemy_name, e.hp, e.attack, e.defense
@@ -275,7 +242,7 @@ def get_levels() -> list:
             )
             rows = cursor.fetchall()
 
-            levels_map = {}
+            levels_map: Dict[int, dict] = {}
             for row in rows:
                 level_id = row["id"]
                 if level_id not in levels_map:
@@ -294,15 +261,10 @@ def get_levels() -> list:
                     }
                     levels_map[level_id]["enemies"].append(enemy)
             return list(levels_map.values())
-    finally:
-        if conn:
-            conn.close()
 
 
 def get_level(level_id: int) -> Optional[Dict[str, Any]]:
-    conn = None
-    try:
-        conn = get_db_connection()
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 """SELECT l.*, lem.slot_position, e.enemy_name, e.hp, e.attack, e.defense
@@ -334,30 +296,20 @@ def get_level(level_id: int) -> Optional[Dict[str, Any]]:
                         }
                     )
             return level
-    finally:
-        if conn:
-            conn.close()
 
 
 def get_user_level_progress(user_id: str) -> list:
-    conn = None
-    try:
-        conn = get_db_connection()
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 "SELECT level_id, completed_at FROM user_level_progress WHERE user_id=%s",
                 (user_id,),
             )
             return list(cursor.fetchall())
-    finally:
-        if conn:
-            conn.close()
 
 
 def complete_level(user_id: str, level_id: int):
-    conn = None
-    try:
-        conn = get_db_connection()
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 """INSERT INTO user_level_progress (user_id, level_id) 
@@ -366,6 +318,3 @@ def complete_level(user_id: str, level_id: int):
                 (user_id, level_id),
             )
             conn.commit()
-    finally:
-        if conn:
-            conn.close()
