@@ -6,7 +6,12 @@ A vanilla JavaScript card match-3 battle game using HTML5 Canvas, featuring mult
 
 ## Screenshots
 
-> Coming soon
+![Login](./docs/login.png)
+![Main Menu](./docs/main.png)
+![Team List](./docs/team.png)
+![Edit Team](./docs/team-edit.png)
+![Select Level](./docs/level-select.png)
+![Battle](./docs/battle.png)
 
 ## Project Structure
 
