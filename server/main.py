@@ -32,6 +32,10 @@ from database import (
     get_legendary_skills,
     create_character,
     get_random_name,
+    get_user_character_count,
+    get_user_max_characters,
+    increase_max_characters,
+    delete_character,
 )
 
 load_dotenv()
@@ -222,6 +226,14 @@ BONUS_RANGES = {
 def summon_character(
     user_record=Depends(get_current_user_with_record),
 ):
+    user_id = user_record[1]["id"]
+    count = get_user_character_count(user_id)
+    max_chars = get_user_max_characters(user_id)
+    if count >= max_chars:
+        raise HTTPException(
+            status_code=400, detail="角色已达上限，请先解雇角色或扩充上限"
+        )
+
     character_type_id = random.choice([1, 2, 3])
     character_name = get_random_name()
 
@@ -266,7 +278,30 @@ def get_characters(
     _: TokenData = Depends(get_current_user),
     user_record=Depends(get_current_user_with_record),
 ):
-    return get_user_characters(user_record[1]["id"])
+    user_id = user_record[1]["id"]
+    chars = get_user_characters(user_id)
+    count = get_user_character_count(user_id)
+    max_count = get_user_max_characters(user_id)
+    return {"characters": chars, "count": count, "max_count": max_count}
+
+
+@app.delete("/characters/{character_id}")
+def dismiss_character(
+    character_id: int,
+    user_record=Depends(get_current_user_with_record),
+):
+    ok = delete_character(user_record[1]["id"], character_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="角色不存在")
+    return {"message": "解雇成功"}
+
+
+@app.post("/characters/expand")
+def expand_character_limit(
+    user_record=Depends(get_current_user_with_record),
+):
+    new_max = increase_max_characters(user_record[1]["id"], 5)
+    return {"max_count": new_max}
 
 
 @app.get("/teams")

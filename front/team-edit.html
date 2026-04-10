@@ -392,7 +392,8 @@
             ]);
 
             if (charsRes && charsRes.ok) {
-                allChars = await charsRes.json();
+                const charsData = await charsRes.json();
+                allChars = charsData.characters || charsData;
             }
 
             if (teamId && teamsRes && teamsRes.ok) {
@@ -631,6 +632,8 @@
                 operation_time_bonus: char.operation_time_bonus || 0,
                 bound_passive_skill_id: char.bound_passive_skill_id || null,
                 passive_skill_id: char.bound_passive_skill_id || null,
+                passive_skill_name: char.bound_skill_name || null,
+                passive_skill_desc: char.bound_skill_desc || null,
                 active_skill_id: null
             });
 

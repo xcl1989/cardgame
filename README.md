@@ -8,6 +8,7 @@
 
 ![登录页面](./docs/login.png)
 ![主菜单](./docs/main.png)
+![角色列表](./docs/characters.png)
 ![队伍列表](./docs/team.png)
 ![编辑队伍](./docs/team-edit.png)
 ![选择关卡](./docs/level-select.png)
@@ -19,7 +20,7 @@
 cardgame/
 ├── front/                     # 前端 (原生 JS + HTML5 Canvas + Vite)
 │   ├── common/               # 公共模块
-│   │   ├── auth.js           # 认证 & API 封装
+│   │   ├── auth.js           # 认证 & API 封装 (JWT Token)
 │   │   ├── common.css       # 全局样式 & 布局
 │   │   └── utils.js          # 工具函数 (XSS转义、loading等)
 │   ├── game/                 # 游戏核心模块
@@ -35,19 +36,20 @@ cardgame/
 │   ├── index.html            # 战斗页面
 │   ├── login.html            # 登录页面
 │   ├── main.html             # 主菜单
-│   ├── characters.html        # 角色列表
+│   ├── characters.html       # 角色列表 & 召唤
 │   ├── team.html             # 队伍列表
 │   ├── team-edit.html        # 编辑队伍
 │   ├── team-select.html      # 选择队伍
 │   ├── level-select.html     # 选择关卡
 │   ├── package.json
 │   └── vite.config.js
-├── server/                   # 后端 (Python FastAPI)
+├── server/                   # 后端 (Python FastAPI + SQLModel ORM)
 │   ├── main.py              # API 接口
-│   ├── database.py          # 数据库操作
-│   ├── init_database.sql     # 数据库初始化
-│   ├── init_levels.sql       # 关卡数据
-│   └── requirements.txt
+│   ├── database.py          # 数据库操作 (SQLModel ORM)
+│   ├── models.py            # 数据库模型定义 (11张表)
+│   ├── init_database.sql     # 数据库初始化 (含种子数据)
+│   ├── requirements.txt
+│   └── alembic/             # 数据库迁移
 └── AGENTS.md                 # 开发规范文档
 ```
 
@@ -68,17 +70,16 @@ brew services start redis
 ### 3. 初始化数据库
 
 ```bash
-cd server
-mysql -uroot -p12345678 Game < init_database.sql
-mysql -uroot -p12345678 Game < init_levels.sql
+mysql -uroot -pYOUR_PW Game < server/init_database.sql
 ```
 
 ### 4. 启动后端
 
 ```bash
 cd server
+cp .env.example .env          # 编辑 MYSQL_PASSWORD 等
 pip install -r requirements.txt
-uvicorn main:app --host 127.0.0.1 --port 8090
+uvicorn main:app --host 127.0.0.1 --port 8090 --reload
 ```
 
 ### 5. 启动前端
@@ -95,14 +96,33 @@ npm run build    # 生产构建
 - **核心机制**: 5×5 棋盘，滑动交换相邻珠子触发三消
 - **珠子类型**: 红色(战士)、蓝色(弓箭手)、绿色(回复)、黄色(法师)、灰色(无效)
 - **战斗流程**: 滑动 → 计时开始 → 三消连锁 → 伤害/回复计算 → 珠子掉落 → 重复
-- **技能系统**: 每个角色有被动技能和主动技能，主动技能可在战斗中手动释放
+- **角色系统**: 召唤角色，角色有稀有度(普通/高级/稀有/传说)、属性加成、专属技能
+- **技能系统**: 每个角色有被动技能和主动技能，传说角色绑定专属被动技能
+- **队伍系统**: 4人编队，每个角色可配置被动和主动技能
 - **关卡设计**: 多波次敌人，BOSS 战
 
 ## 技术栈
 
 - **前端**: 原生 JavaScript (ES6+)、HTML5 Canvas、Vite
-- **后端**: Python FastAPI、MySQL、Redis
-- **通信**: REST API + JWT Token
+- **后端**: Python FastAPI、SQLModel ORM、MySQL、Redis
+- **通信**: REST API + JWT Token (Vite 代理 /api → 后端)
+
+## 数据库架构
+
+| 表 | 说明 | 主键 |
+|---|------|------|
+| users | 用户 | id (UUID) |
+| character_types | 角色类型 (战士/弓箭手/法师) | id |
+| skills | 技能 | id |
+| skill_character_map | 技能-角色类型关联 | (skill_id, character_type) |
+| player_characters | 玩家角色 | id (自增) |
+| teams | 队伍 | id (自增) |
+| team_character_map | 队伍-角色关联 | (team_id, character_id, slot_position) |
+| levels | 关卡 | id (自增) |
+| enemies | 敌人 | id (自增) |
+| level_enemy_map | 关卡-敌人关联 | (level_id, enemy_id, slot_position) |
+| name_pool | 随机名字池 | id (自增) |
+| user_level_progress | 用户关卡进度 | id (自增) |
 
 ## 代码规范
 

@@ -51,6 +51,7 @@
             padding: 16px;
             margin-bottom: 10px;
             border-left: 4px solid;
+            position: relative;
         }
         .char-card.warrior { border-color: #ff4444; }
         .char-card.archer { border-color: #4488ff; }
@@ -65,85 +66,40 @@
         .char-bonus { font-size: 11px; color: #ccc; margin-top: 4px; }
         .bonus-item { display: inline-block; margin-right: 8px; }
         .bound-skill { font-size: 11px; color: #fa4; margin-top: 4px; }
-
-        .modal-overlay {
+        .dismiss-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(255,68,68,0.2);
+            border: 1px solid rgba(255,68,68,0.4);
+            color: #f66;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .dismiss-btn:hover { background: rgba(255,68,68,0.4); }
+        .expand-btn {
+            min-width: 60px;
+            background: #44aa44;
+            border: none;
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .char-count { font-size: 12px; color: #aaa; }
+        .confirm-overlay {
             display: none;
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0,0,0,0.7);
-            z-index: 100;
             justify-content: center;
             align-items: center;
         }
-        .modal-overlay.show { display: flex; }
-        .modal-box {
-            background: #2a2a4e;
-            border: 1px solid #5a5a8e;
-            border-radius: 14px;
-            padding: 24px;
-            width: 300px;
-            color: #fff;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-        .modal-box h3 { font-size: 18px; margin-bottom: 16px; }
-        .type-select {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-        .summon-confirm {
-            width: 100%;
-            padding: 12px;
-            background: #ff8800;
-            border: none;
-            border-radius: 8px;
-            color: #fff;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-bottom: 8px;
-        }
-        .summon-confirm:active { transform: scale(0.97); }
-        .modal-cancel {
-            width: 100%;
-            padding: 10px;
-            background: #444;
-            border: none;
-            border-radius: 8px;
-            color: #aaa;
-            font-size: 14px;
-            cursor: pointer;
-        }
-
-        .result-card {
-            margin-top: 16px;
-            padding: 16px;
-            background: #333;
-            border-radius: 12px;
-            border-left: 4px solid;
-            text-align: left;
-        }
-        .result-card.warrior { border-color: #ff4444; }
-        .result-card.archer { border-color: #4488ff; }
-        .result-card.mage { border-color: #ffff44; }
-        .result-name { font-size: 18px; font-weight: bold; color: #fff; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
-        .result-type { font-size: 13px; color: #aaa; margin-bottom: 6px; }
-        .result-bonus { font-size: 12px; color: #ccc; margin-top: 4px; }
-        .result-bound-skill { font-size: 12px; color: #fa4; margin-top: 4px; }
-        .result-close {
-            width: 100%;
-            padding: 10px;
-            background: #4488ff;
-            border: none;
-            border-radius: 8px;
-            color: #fff;
-            font-size: 14px;
-            cursor: pointer;
-            margin-top: 16px;
-        }
+        .confirm-overlay.show { display: flex; }
 
         @keyframes summonGlow {
             0%, 100% { box-shadow: 0 0 10px rgba(255,136,0,0.3); }
@@ -233,13 +189,78 @@
             border-radius: 50%;
             animation: sparkle 1.5s ease-in-out infinite;
         }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-box {
+            background: #2a2a4e;
+            border: 2px solid #555;
+            border-radius: 14px;
+            padding: 24px;
+            width: 280px;
+            text-align: center;
+            color: #fff;
+        }
+        .summon-confirm {
+            padding: 10px 30px;
+            background: #ff8800;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 15px;
+            cursor: pointer;
+            margin: 8px;
+        }
+        .modal-cancel {
+            padding: 10px 30px;
+            background: #555;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 15px;
+            cursor: pointer;
+            margin: 8px;
+        }
+        .result-close {
+            padding: 10px 30px;
+            background: #4488ff;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 15px;
+            cursor: pointer;
+            margin-top: 16px;
+        }
+        .result-card {
+            background: #3a3a5e;
+            border-radius: 10px;
+            padding: 14px;
+            margin: 12px 0;
+            border-left: 4px solid;
+            text-align: left;
+        }
+        .result-card.warrior { border-color: #ff4444; }
+        .result-card.archer { border-color: #4488ff; }
+        .result-card.mage { border-color: #ffff44; }
+        .result-name { font-size: 16px; font-weight: bold; }
+        .result-type { font-size: 13px; color: #aaa; }
+        .result-bonus { font-size: 12px; color: #ccc; margin-top: 4px; }
+        .result-bound-skill { font-size: 12px; color: #fa4; margin-top: 4px; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="page-header">
             <button class="back-btn" onclick="goBack()">返回</button>
-            <span class="header-title">角色列表</span>
+            <span class="header-title">角色列表 <span class="char-count" id="charCount"></span></span>
+            <button class="expand-btn" onclick="expandLimit()">+5</button>
             <button class="summon-btn" onclick="openSummonModal()">召唤</button>
         </div>
         <div class="sort-bar">
@@ -263,11 +284,24 @@
         </div>
     </div>
 
+    <div class="confirm-overlay" id="confirmOverlay" style="z-index:300">
+        <div class="confirm-box" style="background:#2a2a4e;border:2px solid #f44;border-radius:14px;padding:24px;width:280px;color:#fff;text-align:center">
+            <p id="confirmText" style="margin-bottom:20px;font-size:15px"></p>
+            <div style="display:flex;gap:10px">
+                <button style="flex:1;padding:10px;border:none;border-radius:8px;font-size:14px;cursor:pointer;background:#555;color:#fff" onclick="closeConfirm()">取消</button>
+                <button style="flex:1;padding:10px;border:none;border-radius:8px;font-size:14px;cursor:pointer;background:#f44;color:#fff" onclick="confirmAction()">确认</button>
+            </div>
+        </div>
+    </div>
+
     <script src="common/auth.js"></script>
     <script src="common/utils.js"></script>
     <script>
         let currentSort = 'default';
         let allCharsData = [];
+        let charCount = 0;
+        let maxCount = 50;
+        let pendingAction = null;
         const rarityOrder = { legendary: 4, rare: 3, advanced: 2, normal: 1 };
         const rarityNames = { normal: '普通', advanced: '高级', rare: '稀有', legendary: '传说' };
         const typeNames = { 1: '战士', 2: '弓箭手', 3: '法师' };
@@ -283,12 +317,46 @@
             window.location.href = 'main.html';
         }
 
+        function showConfirm(text, action) {
+            document.getElementById('confirmText').textContent = text;
+            pendingAction = action;
+            document.getElementById('confirmOverlay').classList.add('show');
+        }
+
+        function closeConfirm() {
+            document.getElementById('confirmOverlay').classList.remove('show');
+            pendingAction = null;
+        }
+
+        async function confirmAction() {
+            if (pendingAction) await pendingAction();
+            closeConfirm();
+        }
+
+        function dismissChar(charId) {
+            const c = allCharsData.find(x => x.id === charId);
+            if (!c) return;
+            showConfirm(`确定解雇 ${c.character_name} 吗？`, async () => {
+                await apiFetch(`/characters/${charId}`, { method: 'DELETE' });
+                loadCharacters();
+            });
+        }
+
+        async function expandLimit() {
+            const res = await apiFetch('/characters/expand', { method: 'POST' });
+            if (res && res.ok) {
+                loadCharacters();
+            }
+        }
+
         async function loadCharacters() {
             showLoading('charList');
             try {
                 const res = await apiFetch('/characters');
                 if (res && res.ok) {
-                    allCharsData = await res.json();
+                    const data = await res.json();
+                    allCharsData = data.characters || [];
+                    document.getElementById('charCount').textContent = `${data.count}/${data.max_count}`;
                     renderCharacters(allCharsData);
                 } else {
                     document.getElementById('charList').innerHTML = '<div class="empty-msg">加载失败</div>';
@@ -326,6 +394,7 @@
                     : '';
                 return `
                 <div class="char-card ${typeClass[c.character_type_id] || ''}">
+                    <button class="dismiss-btn" onclick="dismissChar(${c.id})">解雇</button>
                     <div class="char-card-name">${escapeHtml(c.character_name)} <span class="rarity-badge rarity-${rarity}">${rarityNames[rarity]}</span></div>
                     <div class="char-card-type">${typeNames[c.character_type_id] || ''}</div>
                     ${bonusHtml}
@@ -335,7 +404,7 @@
         }
 
         function openSummonModal() {
-            document.getElementById('summonSelect').style.display = '';
+            document.getElementById('summonSelect').style.display = 'block';
             document.getElementById('summonResult').style.display = 'none';
             document.getElementById('summonModal').classList.add('show');
         }
@@ -355,7 +424,8 @@
                     const char = await res.json();
                     showSummonResult(char);
                 } else {
-                    alert('召唤失败');
+                    const data = res ? await res.json().catch(() => ({})) : {};
+                    alert(data.detail || '召唤失败');
                 }
             } catch (e) {
                 alert('召唤失败');
@@ -408,7 +478,7 @@
                 </div>
                 <button class="result-close" onclick="closeSummonAndRefresh()">确定</button>
             `;
-            document.getElementById('summonResult').style.display = '';
+            document.getElementById('summonResult').style.display = 'block';
         }
 
         function closeSummonAndRefresh() {
