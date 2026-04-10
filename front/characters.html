@@ -8,7 +8,38 @@
     <style>
         .page-header { gap: 10px; }
         .header-title { flex: 1; text-align: center; }
-        .header-spacer { min-width: 60px; }
+        .summon-btn {
+            min-width: 60px;
+            background: #ff8800;
+            border: none;
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .summon-btn:active { transform: scale(0.95); }
+        .sort-bar {
+            display: flex;
+            gap: 8px;
+            padding: 10px 15px;
+            flex-shrink: 0;
+        }
+        .sort-btn {
+            padding: 6px 12px;
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 6px;
+            color: #aaa;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .sort-btn.active {
+            background: #4488ff;
+            border-color: #4488ff;
+            color: #fff;
+        }
         .char-list {
             flex: 1;
             overflow-y: auto;
@@ -34,6 +65,174 @@
         .char-bonus { font-size: 11px; color: #ccc; margin-top: 4px; }
         .bonus-item { display: inline-block; margin-right: 8px; }
         .bound-skill { font-size: 11px; color: #fa4; margin-top: 4px; }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-box {
+            background: #2a2a4e;
+            border: 1px solid #5a5a8e;
+            border-radius: 14px;
+            padding: 24px;
+            width: 300px;
+            color: #fff;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .modal-box h3 { font-size: 18px; margin-bottom: 16px; }
+        .type-select {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .summon-confirm {
+            width: 100%;
+            padding: 12px;
+            background: #ff8800;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 8px;
+        }
+        .summon-confirm:active { transform: scale(0.97); }
+        .modal-cancel {
+            width: 100%;
+            padding: 10px;
+            background: #444;
+            border: none;
+            border-radius: 8px;
+            color: #aaa;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .result-card {
+            margin-top: 16px;
+            padding: 16px;
+            background: #333;
+            border-radius: 12px;
+            border-left: 4px solid;
+            text-align: left;
+        }
+        .result-card.warrior { border-color: #ff4444; }
+        .result-card.archer { border-color: #4488ff; }
+        .result-card.mage { border-color: #ffff44; }
+        .result-name { font-size: 18px; font-weight: bold; color: #fff; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+        .result-type { font-size: 13px; color: #aaa; margin-bottom: 6px; }
+        .result-bonus { font-size: 12px; color: #ccc; margin-top: 4px; }
+        .result-bound-skill { font-size: 12px; color: #fa4; margin-top: 4px; }
+        .result-close {
+            width: 100%;
+            padding: 10px;
+            background: #4488ff;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 16px;
+        }
+
+        @keyframes summonGlow {
+            0%, 100% { box-shadow: 0 0 10px rgba(255,136,0,0.3); }
+            50% { box-shadow: 0 0 30px rgba(255,136,0,0.8); }
+        }
+        .summoning .modal-box { animation: summonGlow 0.5s ease-in-out infinite; }
+
+        @keyframes rareShine {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+        @keyframes rarePulse {
+            0%, 100% { box-shadow: 0 0 15px rgba(100,100,255,0.4), 0 0 30px rgba(100,100,255,0.2); }
+            50% { box-shadow: 0 0 25px rgba(100,100,255,0.7), 0 0 50px rgba(100,100,255,0.4), 0 0 80px rgba(100,100,255,0.2); }
+        }
+        .result-rare .modal-box {
+            animation: rarePulse 1s ease-in-out infinite;
+        }
+        .result-rare .result-card {
+            background: linear-gradient(135deg, #2a2a5e, #3a3a8e, #2a2a5e);
+            background-size: 200% 200%;
+            animation: rareShine 2s linear infinite;
+            border-left-width: 4px;
+            box-shadow: 0 0 20px rgba(100,100,255,0.5);
+        }
+        .result-rare h3 {
+            color: #88f !important;
+            text-shadow: 0 0 10px rgba(100,100,255,0.8);
+            font-size: 22px;
+        }
+
+        @keyframes legendaryShine {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        @keyframes legendaryPulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(255,170,0,0.5), 0 0 40px rgba(255,100,0,0.3); }
+            50% { box-shadow: 0 0 40px rgba(255,170,0,0.8), 0 0 80px rgba(255,100,0,0.5), 0 0 120px rgba(255,50,0,0.3); }
+        }
+        @keyframes legendaryTitle {
+            0%, 100% { text-shadow: 0 0 10px #fa4, 0 0 20px #f80, 0 0 30px #f60; transform: scale(1); }
+            50% { text-shadow: 0 0 20px #fa4, 0 0 40px #f80, 0 0 60px #f60; transform: scale(1.1); }
+        }
+        @keyframes cardReveal {
+            0% { transform: scale(0.3) rotateY(180deg); opacity: 0; }
+            50% { transform: scale(1.1) rotateY(0deg); opacity: 1; }
+            100% { transform: scale(1) rotateY(0deg); opacity: 1; }
+        }
+        @keyframes sparkle {
+            0%, 100% { opacity: 0; transform: scale(0); }
+            50% { opacity: 1; transform: scale(1); }
+        }
+        .result-legendary .modal-box {
+            animation: legendaryPulse 0.8s ease-in-out infinite;
+            border-color: #fa4;
+        }
+        .result-legendary .result-card {
+            background: linear-gradient(135deg, #4a2a1a, #6a3a1a, #4a2a1a, #8a4a2a, #4a2a1a);
+            background-size: 400% 400%;
+            animation: legendaryShine 2s ease infinite;
+            border-left-width: 5px;
+            border-color: #fa4;
+            box-shadow: 0 0 30px rgba(255,170,0,0.6), 0 0 60px rgba(255,100,0,0.3);
+            animation: cardReveal 0.8s ease-out, legendaryShine 2s ease infinite;
+        }
+        .result-legendary h3 {
+            color: #fa4 !important;
+            animation: legendaryTitle 1.5s ease-in-out infinite;
+            font-size: 24px;
+        }
+        .result-legendary .result-name {
+            font-size: 22px;
+            text-shadow: 0 0 8px rgba(255,170,0,0.6);
+        }
+        .sparkles {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .sparkle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #fa4;
+            border-radius: 50%;
+            animation: sparkle 1.5s ease-in-out infinite;
+        }
     </style>
 </head>
 <body>
@@ -41,14 +240,45 @@
         <div class="page-header">
             <button class="back-btn" onclick="goBack()">返回</button>
             <span class="header-title">角色列表</span>
-            <div class="header-spacer"></div>
+            <button class="summon-btn" onclick="openSummonModal()">召唤</button>
+        </div>
+        <div class="sort-bar">
+            <span style="color:#888;font-size:12px;line-height:28px">排序:</span>
+            <button class="sort-btn active" onclick="setSort('default'); this.classList.add('active')">默认</button>
+            <button class="sort-btn" onclick="setSort('rarity_desc'); this.classList.add('active')">稀有度↓</button>
+            <button class="sort-btn" onclick="setSort('rarity_asc'); this.classList.add('active')">稀有度↑</button>
         </div>
         <div class="char-list" id="charList"></div>
+    </div>
+
+    <div class="modal-overlay" id="summonModal">
+        <div class="modal-box" id="summonBox">
+            <div id="summonSelect">
+                <h3>召唤新角色</h3>
+                <p style="color:#aaa;font-size:13px;margin-bottom:16px">随机获得一个新角色</p>
+                <button class="summon-confirm" onclick="doSummon()">召唤</button>
+                <button class="modal-cancel" onclick="closeSummonModal()">取消</button>
+            </div>
+            <div id="summonResult" style="display:none"></div>
+        </div>
     </div>
 
     <script src="common/auth.js"></script>
     <script src="common/utils.js"></script>
     <script>
+        let currentSort = 'default';
+        let allCharsData = [];
+        const rarityOrder = { legendary: 4, rare: 3, advanced: 2, normal: 1 };
+        const rarityNames = { normal: '普通', advanced: '高级', rare: '稀有', legendary: '传说' };
+        const typeNames = { 1: '战士', 2: '弓箭手', 3: '法师' };
+        const typeClass = { 1: 'warrior', 2: 'archer', 3: 'mage' };
+
+        function setSort(sort) {
+            currentSort = sort;
+            document.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
+            renderCharacters(allCharsData);
+        }
+
         function goBack() {
             window.location.href = 'main.html';
         }
@@ -58,8 +288,8 @@
             try {
                 const res = await apiFetch('/characters');
                 if (res && res.ok) {
-                    const chars = await res.json();
-                    renderCharacters(chars);
+                    allCharsData = await res.json();
+                    renderCharacters(allCharsData);
                 } else {
                     document.getElementById('charList').innerHTML = '<div class="empty-msg">加载失败</div>';
                 }
@@ -68,19 +298,19 @@
             }
         }
 
-        const rarityNames = { normal: '普通', advanced: '高级', rare: '稀有', legendary: '传说' };
-
         function renderCharacters(chars) {
             const list = document.getElementById('charList');
-            if (chars.length === 0) {
+            let sorted = [...chars];
+            if (currentSort === 'rarity_desc') {
+                sorted.sort((a, b) => (rarityOrder[b.rarity] || 0) - (rarityOrder[a.rarity] || 0));
+            } else if (currentSort === 'rarity_asc') {
+                sorted.sort((a, b) => (rarityOrder[a.rarity] || 0) - (rarityOrder[b.rarity] || 0));
+            }
+            if (sorted.length === 0) {
                 list.innerHTML = '<div class="empty-msg">暂无角色</div>';
                 return;
             }
-
-            const typeNames = { 1: '战士', 2: '弓箭手', 3: '法师' };
-            const typeClass = { 1: 'warrior', 2: 'archer', 3: 'mage' };
-
-            list.innerHTML = chars.map(c => {
+            list.innerHTML = sorted.map(c => {
                 const rarity = c.rarity || 'normal';
                 const bonuses = [];
                 if (c.attack_bonus > 0) bonuses.push(`攻击+${c.attack_bonus}`);
@@ -102,6 +332,89 @@
                     ${boundSkillHtml}
                 </div>`;
             }).join('');
+        }
+
+        function openSummonModal() {
+            document.getElementById('summonSelect').style.display = '';
+            document.getElementById('summonResult').style.display = 'none';
+            document.getElementById('summonModal').classList.add('show');
+        }
+
+        function closeSummonModal() {
+            document.getElementById('summonModal').classList.remove('show');
+        }
+
+        async function doSummon() {
+            document.getElementById('summonModal').classList.add('summoning');
+            try {
+                const res = await apiFetch('/characters/summon', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (res && res.ok) {
+                    const char = await res.json();
+                    showSummonResult(char);
+                } else {
+                    alert('召唤失败');
+                }
+            } catch (e) {
+                alert('召唤失败');
+            }
+            document.getElementById('summonModal').classList.remove('summoning');
+        }
+
+        function showSummonResult(char) {
+            document.getElementById('summonSelect').style.display = 'none';
+            const rarity = char.rarity || 'normal';
+            const modal = document.getElementById('summonModal');
+            modal.classList.remove('result-rare', 'result-legendary');
+            if (rarity === 'rare') modal.classList.add('result-rare');
+            if (rarity === 'legendary') modal.classList.add('result-legendary');
+
+            const bonuses = [];
+            if (char.attack_bonus > 0) bonuses.push(`攻击+${char.attack_bonus}`);
+            if (char.defense_bonus > 0) bonuses.push(`防御+${char.defense_bonus}`);
+            if (char.recovery_bonus > 0) bonuses.push(`回复+${char.recovery_bonus}`);
+            if (char.hp_bonus > 0) bonuses.push(`血量+${char.hp_bonus}`);
+            if (char.operation_time_bonus > 0) bonuses.push(`时长+${char.operation_time_bonus}ms`);
+            const bonusHtml = bonuses.length > 0
+                ? `<div class="result-bonus">${bonuses.join(' ')}</div>` : '';
+            const boundSkillHtml = (rarity === 'legendary' && char.bound_skill_name)
+                ? `<div class="result-bound-skill">专属: ${escapeHtml(char.bound_skill_name)}</div>` : '';
+
+            let sparklesHtml = '';
+            if (rarity === 'legendary' || rarity === 'rare') {
+                const color = rarity === 'legendary' ? '#fa4' : '#88f';
+                const count = rarity === 'legendary' ? 20 : 10;
+                const sparkles = [];
+                for (let i = 0; i < count; i++) {
+                    const x = Math.random() * 100;
+                    const y = Math.random() * 100;
+                    const delay = Math.random() * 2;
+                    const size = 3 + Math.random() * 5;
+                    sparkles.push(`<div class="sparkle" style="left:${x}%;top:${y}%;width:${size}px;height:${size}px;background:${color};animation-delay:${delay}s"></div>`);
+                }
+                sparklesHtml = `<div class="sparkles">${sparkles.join('')}</div>`;
+            }
+
+            document.getElementById('summonResult').innerHTML = `
+                ${sparklesHtml}
+                <h3>召唤成功!</h3>
+                <div class="result-card ${typeClass[char.character_type_id] || ''}">
+                    <div class="result-name">${escapeHtml(char.character_name)} <span class="rarity-badge rarity-${rarity}">${rarityNames[rarity]}</span></div>
+                    <div class="result-type">${typeNames[char.character_type_id] || ''}</div>
+                    ${bonusHtml}
+                    ${boundSkillHtml}
+                </div>
+                <button class="result-close" onclick="closeSummonAndRefresh()">确定</button>
+            `;
+            document.getElementById('summonResult').style.display = '';
+        }
+
+        function closeSummonAndRefresh() {
+            document.getElementById('summonModal').classList.remove('result-rare', 'result-legendary');
+            closeSummonModal();
+            loadCharacters();
         }
 
         loadCharacters();

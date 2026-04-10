@@ -121,6 +121,12 @@ CREATE TABLE IF NOT EXISTS level_enemy_map (
     FOREIGN KEY (enemy_id) REFERENCES enemies(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 名字池表
+CREATE TABLE IF NOT EXISTS name_pool (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- 用户关卡进度表
 CREATE TABLE IF NOT EXISTS user_level_progress (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -168,6 +174,29 @@ INSERT INTO skill_character_map (skill_id, character_type) VALUES
 (6, 1), (9, 1),
 (7, 2), (10, 2),
 (8, 3), (9, 3);
+
+-- 名字池
+INSERT IGNORE INTO name_pool (name) VALUES
+('牛顿'),('欧拉'),('高斯'),('爱因斯坦'),('达尔文'),
+('居里夫人'),('特斯拉'),('霍金'),('费曼'),('玻尔'),
+('薛定谔'),('海森堡'),('狄拉克'),('泡利'),('玻恩'),
+('普朗克'),('法拉第'),('麦克斯韦'),('赫兹'),('安培'),
+('伏特'),('欧姆'),('库仑'),('韦伯'),('楞次'),
+('焦耳'),('开尔文'),('卡诺'),('克劳修斯'),('玻尔兹曼'),
+('吉布斯'),('亥姆霍兹'),('哈密顿'),('拉格朗日'),('傅里叶'),
+('拉普拉斯'),('泊松'),('柯西'),('黎曼'),('伽罗瓦'),
+('阿贝尔'),('庞加莱'),('希尔伯特'),('哥德尔'),('图灵'),
+('冯诺依曼'),('香农'),('维纳'),('纳什'),('门捷列夫'),
+('道尔顿'),('阿伏伽德罗'),('波义耳'),('查理'),('盖吕萨克'),
+('卡文迪许'),('胡克'),('托里拆利'),('帕斯卡'),('伯努利'),
+('泰勒'),('麦克劳林'),('斯特林'),('贝叶斯'),('马尔可夫'),
+('切比雪夫'),('洛必达'),('雅可比'),('阿达马'),('刘维尔'),
+('魏尔斯特拉斯'),('康托尔'),('戴德金'),('克莱因'),('诺特'),
+('埃米'),('闵可夫斯基'),('洛伦兹'),('菲涅尔'),('托马斯杨'),
+('夫琅禾费'),('多普勒'),('哈勃'),('开普勒'),('哥白尼'),
+('托勒密'),('阿基米德'),('毕达哥拉斯'),('亚里士多德'),('欧几里得'),
+('笛卡尔'),('莱布尼茨'),('巴斯德'),('孟德尔'),('摩尔根'),
+('沃森'),('克里克'),('费马'),('伦福德'),('卡塞尔');
 
 -- 玩家角色 (普通角色无加成，高级/稀有/传说有属性加成)
 INSERT INTO player_characters (id, user_id, character_type_id, character_name, rarity, attack_bonus, defense_bonus, recovery_bonus, hp_bonus, operation_time_bonus, bound_passive_skill_id) VALUES

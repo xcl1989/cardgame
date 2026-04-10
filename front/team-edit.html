@@ -160,6 +160,27 @@
             font-size: 14px;
             color: #888;
             margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .sort-btns {
+            display: flex;
+            gap: 6px;
+        }
+        .sort-btn {
+            padding: 4px 10px;
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #aaa;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .sort-btn.active {
+            background: #4488ff;
+            border-color: #4488ff;
+            color: #fff;
         }
         .char-list {
             display: grid;
@@ -312,7 +333,14 @@
             <div class="team-slots" id="teamSlots"></div>
         </div>
         <div class="char-section">
-            <div class="char-section-title">点击角色放入队伍</div>
+            <div class="char-section-title">
+                <span>点击角色放入队伍</span>
+                <div class="sort-btns">
+                    <button class="sort-btn active" onclick="setCharSort('default', this)">默认</button>
+                    <button class="sort-btn" onclick="setCharSort('rarity_desc', this)">稀有度↓</button>
+                    <button class="sort-btn" onclick="setCharSort('rarity_asc', this)">稀有度↑</button>
+                </div>
+            </div>
             <div class="char-list" id="charList"></div>
         </div>
     </div>
@@ -339,6 +367,16 @@
         let skillsCache = {};
         let activeSkillsCache = {};
         let currentSkillTab = 'passive';
+
+        let currentCharSort = 'default';
+        const rarityOrder = { legendary: 4, rare: 3, advanced: 2, normal: 1 };
+
+        function setCharSort(sort, btn) {
+            currentCharSort = sort;
+            btn.closest('.sort-btns').querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderChars();
+        }
 
         function goBack() {
             window.location.href = 'team.html';
@@ -437,7 +475,14 @@
             const rarityNames = { normal: '普通', advanced: '高级', rare: '稀有', legendary: '传说' };
             const usedCharIds = teamData.characters.map(c => c.character_id);
 
-            const charsHtml = allChars.map(c => {
+            let sorted = [...allChars];
+            if (currentCharSort === 'rarity_desc') {
+                sorted.sort((a, b) => (rarityOrder[b.rarity] || 0) - (rarityOrder[a.rarity] || 0));
+            } else if (currentCharSort === 'rarity_asc') {
+                sorted.sort((a, b) => (rarityOrder[a.rarity] || 0) - (rarityOrder[b.rarity] || 0));
+            }
+
+            const charsHtml = sorted.map(c => {
                 const isUsed = usedCharIds.includes(c.id);
                 const rarity = c.rarity || 'normal';
                 const bonuses = [];

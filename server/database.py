@@ -1,4 +1,6 @@
 import os
+import uuid
+import random
 from contextlib import contextmanager
 from typing import Optional, List, Dict, Any
 
@@ -86,6 +88,64 @@ def get_user_characters(user_id: str) -> list:
                 (user_id,),
             )
             return list(cursor.fetchall())
+
+
+def get_legendary_skills() -> list:
+    with get_db() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT id, name, description, effect_value FROM skills WHERE id IN (12, 13, 14, 15)"
+            )
+            return list(cursor.fetchall())
+
+
+def get_random_name() -> str:
+    with get_db() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT name FROM name_pool ORDER BY RAND() LIMIT 1")
+            row = cursor.fetchone()
+            return row["name"] if row else f"角色{random.randint(100, 999)}"
+
+
+def create_character(
+    user_id: str,
+    character_type_id: int,
+    character_name: str,
+    rarity: str,
+    bonuses: dict,
+    bound_passive_skill_id=None,
+) -> dict:
+    with get_db() as conn:
+        with conn.cursor() as cursor:
+            type_names = {1: "战士", 2: "弓箭手", 3: "法师"}
+            cursor.execute(
+                """INSERT INTO player_characters
+                   (user_id, character_type_id, character_name, rarity,
+                    attack_bonus, defense_bonus, recovery_bonus, hp_bonus, operation_time_bonus, bound_passive_skill_id)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                (
+                    user_id,
+                    character_type_id,
+                    character_name,
+                    rarity,
+                    bonuses["attack_bonus"],
+                    bonuses["defense_bonus"],
+                    bonuses["recovery_bonus"],
+                    bonuses["hp_bonus"],
+                    bonuses["operation_time_bonus"],
+                    bound_passive_skill_id,
+                ),
+            )
+            conn.commit()
+            char_id = cursor.lastrowid
+            cursor.execute(
+                """SELECT pc.*, s.name as bound_skill_name, s.description as bound_skill_desc
+                   FROM player_characters pc
+                   LEFT JOIN skills s ON pc.bound_passive_skill_id = s.id
+                   WHERE pc.id=%s""",
+                (char_id,),
+            )
+            return cursor.fetchone()
 
 
 def get_user_teams(user_id: str) -> list:

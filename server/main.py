@@ -1,6 +1,7 @@
 import os
 import uuid
 import time
+import random
 import logging
 
 import redis
@@ -28,6 +29,9 @@ from database import (
     get_skill,
     get_user_level_progress,
     complete_level,
+    get_legendary_skills,
+    create_character,
+    get_random_name,
 )
 
 load_dotenv()
@@ -178,6 +182,83 @@ def logout(authorization: Optional[str] = Header(None)):
 @app.get("/verify")
 def verify(user: TokenData = Depends(get_current_user)):
     return {"username": user.username, "nickname": user.nickname}
+
+
+RARITY_WEIGHTS = {"normal": 60, "advanced": 25, "rare": 12, "legendary": 3}
+BONUS_ATTRIBUTES = [
+    "attack_bonus",
+    "defense_bonus",
+    "recovery_bonus",
+    "hp_bonus",
+    "operation_time_bonus",
+]
+BONUS_RANGES = {
+    "normal": {},
+    "advanced": {
+        "attack_bonus": (1, 2),
+        "defense_bonus": (1, 2),
+        "recovery_bonus": (1, 2),
+        "hp_bonus": (5, 5),
+        "operation_time_bonus": (250, 500),
+    },
+    "rare": {
+        "attack_bonus": (2, 3),
+        "defense_bonus": (2, 3),
+        "recovery_bonus": (2, 2),
+        "hp_bonus": (5, 10),
+        "operation_time_bonus": (500, 500),
+    },
+    "legendary": {
+        "attack_bonus": (3, 5),
+        "defense_bonus": (3, 5),
+        "recovery_bonus": (3, 3),
+        "hp_bonus": (8, 15),
+        "operation_time_bonus": (500, 750),
+    },
+}
+
+
+@app.post("/characters/summon")
+def summon_character(
+    user_record=Depends(get_current_user_with_record),
+):
+    character_type_id = random.choice([1, 2, 3])
+    character_name = get_random_name()
+
+    roll = random.randint(1, 100)
+    cumulative = 0
+    rarity = "normal"
+    for r, w in RARITY_WEIGHTS.items():
+        cumulative += w
+        if roll <= cumulative:
+            rarity = r
+            break
+
+    bonuses = {attr: 0 for attr in BONUS_ATTRIBUTES}
+    bonus_count = {"advanced": 1, "rare": 2, "legendary": 2}.get(rarity, 0)
+    if bonus_count > 0:
+        ranges = BONUS_RANGES[rarity]
+        chosen = random.sample(list(ranges.keys()), bonus_count)
+        for attr in chosen:
+            lo, hi = ranges[attr]
+            bonuses[attr] = random.randint(lo, hi)
+
+    bound_passive_skill_id = None
+    if rarity == "legendary":
+        legendary_skills = get_legendary_skills()
+        if legendary_skills:
+            skill = random.choice(legendary_skills)
+            bound_passive_skill_id = skill["id"]
+
+    char = create_character(
+        user_id=user_record[1]["id"],
+        character_type_id=character_type_id,
+        character_name=character_name,
+        rarity=rarity,
+        bonuses=bonuses,
+        bound_passive_skill_id=bound_passive_skill_id,
+    )
+    return char
 
 
 @app.get("/characters")
