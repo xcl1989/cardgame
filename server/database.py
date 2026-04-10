@@ -21,6 +21,7 @@ from models import (
     LevelEnemyMap,
     NamePool,
     UserLevelProgress,
+    Chapter,
 )
 
 load_dotenv()
@@ -588,10 +589,31 @@ def get_levels() -> list:
                 {
                     "id": level.id,
                     "level_name": level.level_name,
+                    "chapter_id": level.chapter_id,
                     "enemies": enemies,
                 }
             )
         return result
+    finally:
+        session.close()
+
+
+def get_chapters() -> list:
+    session = SQLModelSession(engine)
+    try:
+        chapters = (
+            session.exec(select(Chapter).order_by(Chapter.chapter_order))
+            .scalars()
+            .all()
+        )
+        return [
+            {
+                "id": c.id,
+                "chapter_name": c.chapter_name,
+                "chapter_order": c.chapter_order,
+            }
+            for c in chapters
+        ]
     finally:
         session.close()
 

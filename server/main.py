@@ -36,6 +36,7 @@ from database import (
     get_user_max_characters,
     increase_max_characters,
     delete_character,
+    get_chapters,
 )
 
 load_dotenv()
@@ -400,6 +401,7 @@ def get_all_levels(user_record=Depends(get_current_user_with_record)):
         {
             "id": level["id"],
             "level_name": level["level_name"],
+            "chapter_id": level.get("chapter_id"),
             "enemy_name": level["enemies"][-1]["enemy_name"]
             if level.get("enemies")
             else "敌人",
@@ -414,6 +416,50 @@ def get_all_levels(user_record=Depends(get_current_user_with_record)):
             "is_completed": level["id"] in completed_levels,
         }
         for level in levels
+    ]
+
+
+@app.get("/chapters")
+def get_all_levels_by_chapter(
+    user_record=Depends(get_current_user_with_record),
+):
+    chapters = get_chapters()
+    levels = get_levels()
+    progress = get_user_level_progress(user_record[1]["id"])
+    completed_levels = {p["level_id"] for p in progress}
+
+    chapter_map = {}
+    for level in levels:
+        cid = level.get("chapter_id")
+        if cid not in chapter_map:
+            chapter_map[cid] = []
+        chapter_map[cid].append(
+            {
+                "id": level["id"],
+                "level_name": level["level_name"],
+                "enemy_name": level["enemies"][-1]["enemy_name"]
+                if level.get("enemies")
+                else "敌人",
+                "enemy_hp": level["enemies"][-1]["hp"] if level.get("enemies") else 0,
+                "enemy_attack": level["enemies"][-1]["attack"]
+                if level.get("enemies")
+                else 20,
+                "enemy_defense": level["enemies"][-1]["defense"]
+                if level.get("enemies")
+                else 0,
+                "is_unlocked": True,
+                "is_completed": level["id"] in completed_levels,
+            }
+        )
+
+    return [
+        {
+            "id": c["id"],
+            "chapter_name": c["chapter_name"],
+            "chapter_order": c["chapter_order"],
+            "levels": chapter_map.get(c["id"], []),
+        }
+        for c in chapters
     ]
 
 

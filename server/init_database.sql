@@ -91,11 +91,20 @@ CREATE TABLE IF NOT EXISTS team_character_map (
     FOREIGN KEY (active_skill_id) REFERENCES skills(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 章节表
+CREATE TABLE IF NOT EXISTS chapters (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    chapter_name VARCHAR(50) NOT NULL,
+    chapter_order INT DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- 关卡表
 CREATE TABLE IF NOT EXISTS levels (
     id INT AUTO_INCREMENT PRIMARY KEY,
     level_name VARCHAR(50) NOT NULL,
-    level_order INT DEFAULT 0
+    level_order INT DEFAULT 0,
+    chapter_id INT DEFAULT NULL,
+    FOREIGN KEY (chapter_id) REFERENCES chapters(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 敌人表
@@ -206,23 +215,34 @@ INSERT INTO player_characters (id, user_id, character_type_id, character_name, r
 (5, 'a855635a-322e-11f1-9cbd-df2001a53a33', 3, '加百列', 'rare', 1, 0, 1, 0, 0, NULL),
 (6, 'a855635a-322e-11f1-9cbd-df2001a53a33', 3, '克洛', 'legendary', 2, 1, 0, 5, 0, 5);
 
+-- 章节
+INSERT INTO chapters (id, chapter_name, chapter_order) VALUES
+(1, '新手村', 0),
+(2, '哥布林森林', 1);
+
 -- 关卡
-INSERT INTO levels (id, level_name, level_order) VALUES
-(1, '0-1', 0),
-(2, '0-2', 1),
-(3, '0-3', 2);
+INSERT INTO levels (id, level_name, level_order, chapter_id) VALUES
+(1, '0-1', 0, 1),
+(2, '0-2', 1, 1),
+(3, '0-3', 2, 1),
+(4, '1-1', 3, 2);
 
 -- 敌人
 INSERT INTO enemies (id, enemy_name, hp, attack, defense) VALUES
 (1, '普通敌人', 200, 10, 0),
 (2, '中级敌人', 300, 15, 0),
-(3, '高级敌人', 500, 20, 0);
+(3, '高级敌人', 500, 20, 0),
+(4, '哥布林', 240, 24, 4),
+(5, '史莱姆', 200, 12, 8),
+(6, '大哥布林', 480, 30, 6),
+(7, '金属史莱姆', 200, 20, 12);
 
 -- 关卡-敌人关联
 INSERT INTO level_enemy_map (level_id, enemy_id, slot_position) VALUES
 (1, 1, 0),
 (2, 1, 0), (2, 2, 1),
-(3, 2, 0), (3, 3, 1);
+(3, 2, 0), (3, 3, 1),
+(4, 2, 0), (4, 4, 1), (4, 5, 2);
 
 -- 队伍
 INSERT INTO teams (id, user_id, team_name) VALUES

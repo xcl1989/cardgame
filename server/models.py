@@ -118,13 +118,25 @@ class TeamCharacterMap(SQLModel, table=True):
     )
 
 
+class Chapter(SQLModel, table=True):
+    __tablename__ = "chapters"
+
+    id: int = Field(default=None, primary_key=True)
+    chapter_name: str = Field(max_length=50)
+    chapter_order: int = Field(default=0)
+
+    levels: List["Level"] = Relationship(back_populates="chapter")
+
+
 class Level(SQLModel, table=True):
     __tablename__ = "levels"
 
     id: int = Field(default=None, primary_key=True)
     level_name: str = Field(max_length=50)
     level_order: int = Field(default=0)
+    chapter_id: Optional[int] = Field(default=None, foreign_key="chapters.id")
 
+    chapter: Optional[Chapter] = Relationship(back_populates="levels")
     enemy_maps: List["LevelEnemyMap"] = Relationship(back_populates="level")
 
 

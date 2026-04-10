@@ -25,10 +25,36 @@
         .header-spacer {
             min-width: 60px;
         }
+        .chapter-tabs {
+            display: flex;
+            overflow-x: auto;
+            gap: 8px;
+            padding: 0 15px 10px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .chapter-tab {
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: #2a2a5e;
+            color: #aaa;
+            border: 1px solid #4a4a7e;
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: 14px;
+            transition: background 0.2s, color 0.2s, border-color 0.2s;
+        }
+        .chapter-tab:active {
+            transform: scale(0.95);
+        }
+        .chapter-tab.active {
+            background: #4a4a9e;
+            color: #fff;
+            border-color: #7a7ade;
+        }
         .level-list {
             flex: 1;
             overflow-y: auto;
-            padding: 15px;
+            padding: 0 15px 15px;
             display: flex;
             flex-direction: column;
             gap: 15px;
@@ -76,6 +102,11 @@
         .level-status.locked {
             color: #f66;
         }
+        .empty-msg {
+            text-align: center;
+            color: #888;
+            padding: 30px;
+        }
     </style>
 </head>
 <body>
@@ -85,6 +116,7 @@
             <span class="header-title">选择关卡</span>
             <div class="header-spacer"></div>
         </div>
+        <div class="chapter-tabs" id="chapterTabs"></div>
         <div class="level-list" id="levelList">
             <div class="empty-msg">加载中...</div>
         </div>
@@ -93,16 +125,25 @@
     <script src="common/auth.js"></script>
     <script src="common/utils.js"></script>
     <script>
+        let chapters = [];
+        let activeChapterId = null;
+
         function goBack() {
             window.location.href = 'main.html';
         }
 
-        async function loadLevels() {
+        async function loadChapters() {
             try {
-                const res = await apiFetch('/levels');
+                const res = await apiFetch('/chapters');
                 if (res && res.ok) {
-                    const levels = await res.json();
-                    renderLevels(levels);
+                    chapters = await res.json();
+                    if (chapters.length === 0) {
+                        document.getElementById('levelList').innerHTML = '<div class="empty-msg">暂无关卡</div>';
+                        return;
+                    }
+                    renderChapterTabs();
+                    activeChapterId = chapters[0].id;
+                    renderLevels();
                 } else {
                     document.getElementById('levelList').innerHTML = '<div class="empty-msg">加载失败</div>';
                 }
@@ -111,15 +152,28 @@
             }
         }
 
-        function renderLevels(levels) {
+        function renderChapterTabs() {
+            const tabsEl = document.getElementById('chapterTabs');
+            tabsEl.innerHTML = chapters.map(c => 
+                `<div class="chapter-tab ${c.id === activeChapterId ? 'active' : ''}" onclick="switchChapter(${c.id})">${escapeHtml(c.chapter_name)}</div>`
+            ).join('');
+        }
+
+        function switchChapter(chapterId) {
+            activeChapterId = chapterId;
+            renderChapterTabs();
+            renderLevels();
+        }
+
+        function renderLevels() {
             const list = document.getElementById('levelList');
-            
-            if (levels.length === 0) {
-                list.innerHTML = '<div class="empty-msg">暂无关卡</div>';
+            const chapter = chapters.find(c => c.id === activeChapterId);
+            if (!chapter || !chapter.levels || chapter.levels.length === 0) {
+                list.innerHTML = '<div class="empty-msg">该章节暂无关卡</div>';
                 return;
             }
 
-            list.innerHTML = levels.map(level => `
+            list.innerHTML = chapter.levels.map(level => `
                 <div class="level-card ${level.is_unlocked ? '' : 'locked'} ${level.is_completed ? 'completed' : ''}" onclick="${level.is_unlocked ? `selectLevel(${level.id})` : ''}">
                     <div class="level-name">${escapeHtml(level.level_name)} ${level.is_completed ? '✓' : ''}</div>
                     <div class="level-info">
@@ -139,7 +193,7 @@
             window.location.href = `team-select.html?level_id=${levelId}`;
         }
 
-        loadLevels();
+        loadChapters();
     </script>
 </body>
 </html>
