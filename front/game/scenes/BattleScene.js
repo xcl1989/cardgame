@@ -1,9 +1,11 @@
 import {
-    BALL_COLORS, BALL_TYPES, GRID, CELL,
+    BALL_TYPES, GRID, CELL,
     CANVAS_WIDTH, CANVAS_HEIGHT
 } from '../utils/constants.js';
 import { delay } from '../utils/helpers.js';
 import Board from '../objects/Board.js';
+import AnimationManager from '../effects/AnimationManager.js';
+import BattleRenderer from '../effects/BattleRenderer.js';
 
 class BattleScene {
     constructor(config) {
@@ -43,8 +45,6 @@ class BattleScene {
         this.swapProgress = 0;
 
         this.combo = 0;
-        this.showCombo = 0;
-        this.showComboTime = 0;
 
         this.isDragging = false;
         this.dragBall = null;
@@ -60,7 +60,8 @@ class BattleScene {
         this.timeLeft = this.config.timeLimit;
         this.timeBarStart = 0;
 
-        this.damageTexts = [];
+        this.anim = new AnimationManager();
+        this.renderer = new BattleRenderer(this.ctx, this);
 
         this.isVictory = false;
         this.isGameOver = false;
@@ -71,17 +72,59 @@ class BattleScene {
         this._initEvents();
         this.updateCharacterDisplay();
         this._startRenderLoop();
+        this._playIntro();
+    }
+
+    async _playIntro() {
+        this.anim.introAnimating = true;
+        const savedGrid = this.board.grid.map(row => [...row]);
+        for (let r = 0; r < GRID; r++) {
+            for (let c = 0; c < GRID; c++) {
+                this.board.grid[r][c] = null;
+            }
+        }
+        this.draw();
+
+        for (let c = 0; c < GRID; c++) {
+            const dropInfo = [];
+            for (let r = 0; r < GRID; r++) {
+                dropInfo.push({ r, c, type: savedGrid[r][c], distance: GRID + 2 });
+            }
+            this.board.dropInfo = dropInfo;
+            this.board.dropProgress = 0;
+
+            await new Promise(resolve => {
+                const start = Date.now();
+                const duration = 300;
+                const animate = () => {
+                    const elapsed = Date.now() - start;
+                    this.board.dropProgress = Math.min(elapsed / duration, 1);
+                    this.draw();
+                    if (elapsed < duration) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        resolve();
+                    }
+                };
+                requestAnimationFrame(animate);
+            });
+
+            for (let r = 0; r < GRID; r++) {
+                this.board.grid[r][c] = savedGrid[r][c];
+            }
+            this.board.dropInfo = null;
+            this.board.dropProgress = 0;
+        }
+
+        this.anim.introAnimating = false;
         this.draw();
     }
 
     _startRenderLoop() {
         const loop = () => {
-            const hasAnimation = this.board.dropInfo
-                || (this.showCombo > 0 && Date.now() - this.showComboTime < 1500)
-                || this.damageTexts.length > 0;
-            if (this._dirty || hasAnimation) {
+            if (this._dirty || this.anim.isAnimating(this.board)) {
                 this._dirty = false;
-                this._render();
+                this.renderer.render();
             }
             this._renderRafId = requestAnimationFrame(loop);
         };
@@ -92,119 +135,8 @@ class BattleScene {
         this._dirty = true;
     }
 
-    _render() {
-        if (this.isVictory || this.isGameOver) return;
-
-        const ctx = this.ctx;
-        const grid = this.board.grid;
-
-        ctx.fillStyle = '#2a2a4e';
-        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-        ctx.fillStyle = '#333';
-        ctx.fillRect(this.startX, 10, GRID * CELL, 18);
-        ctx.fillStyle = '#44ff44';
-        ctx.fillRect(this.startX, 10, (this.playerHp / this.config.playerHp) * GRID * CELL, 18);
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 12px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(`${Math.floor(this.playerHp)}/${this.config.playerHp}`, this.startX + (GRID * CELL) / 2, 24);
-
-        ctx.fillStyle = '#444';
-        ctx.fillRect(this.startX, 32, GRID * CELL, 6);
-        ctx.fillStyle = '#4488ff';
-        ctx.fillRect(this.startX, 32, (this.timeLeft / this.config.timeLimit) * GRID * CELL, 6);
-
-        ctx.fillStyle = '#252545';
-        ctx.fillRect(this.startX - 5, this.startY + 5, GRID * CELL + 10, GRID * CELL + 10);
-
-        for (let r = 0; r < GRID; r++) {
-            for (let c = 0; c < GRID; c++) {
-                ctx.strokeStyle = '#3a3a5e';
-                ctx.strokeRect(this.startX + c * CELL, this.startY + r * CELL, CELL, CELL);
-            }
-        }
-
-        const dropAnim = {};
-        if (this.board.dropInfo) {
-            const p = this.board.dropProgress;
-            const ease = p * p * (3 - 2 * p);
-            for (const d of this.board.dropInfo) {
-                const startY = this._getY(d.r) - d.distance * CELL;
-                const endY = this._getY(d.r);
-                dropAnim[`${d.r},${d.c}`] = { type: d.type, y: startY + (endY - startY) * ease };
-            }
-        }
-
-        for (let r = 0; r < GRID; r++) {
-            for (let c = 0; c < GRID; c++) {
-                let type = grid[r][c];
-
-                if (this.board.dropInfo) {
-                    const key = `${r},${c}`;
-                    if (dropAnim[key]) type = dropAnim[key].type;
-                }
-
-                if (type === null) continue;
-
-                let x = this._getX(c);
-                let y = this._getY(r);
-
-                if (this.board.dropInfo) {
-                    const key = `${r},${c}`;
-                    if (dropAnim[key]) y = dropAnim[key].y;
-                }
-
-                if (this.dragBall && r === this.dragBall.r && c === this.dragBall.c) {
-                    if (this.isDragging) {
-                        x = this.dragX;
-                        y = this.dragY;
-                        ctx.shadowColor = BALL_COLORS[type];
-                        ctx.shadowBlur = 20;
-                    }
-                }
-
-                ctx.fillStyle = BALL_COLORS[type];
-                ctx.beginPath();
-                ctx.arc(x, y, CELL / 2 - 4, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.shadowBlur = 0;
-
-                if (type === 4) {
-                    ctx.strokeStyle = '#555';
-                    ctx.lineWidth = 3;
-                    ctx.beginPath();
-                    ctx.moveTo(x - 8, y - 8);
-                    ctx.lineTo(x + 8, y + 8);
-                    ctx.moveTo(x + 8, y - 8);
-                    ctx.lineTo(x - 8, y + 8);
-                    ctx.stroke();
-                }
-            }
-        }
-
-        if (this.showCombo > 0 && Date.now() - this.showComboTime < 1500) {
-            const alpha = 1 - (Date.now() - this.showComboTime) / 1500;
-            ctx.fillStyle = `rgba(255,255,0,${alpha})`;
-            ctx.font = 'bold 20px Arial';
-            ctx.textAlign = 'right';
-            ctx.fillText(`${this.showCombo} Combo!`, 300, 30);
-        }
-
-        for (let i = this.damageTexts.length - 1; i >= 0; i--) {
-            const dt = this.damageTexts[i];
-            dt.y += dt.vy;
-            dt.alpha -= 0.02;
-            if (dt.alpha <= 0) {
-                this.damageTexts.splice(i, 1);
-                continue;
-            }
-            ctx.fillStyle = `rgba(255,68,68,${dt.alpha})`;
-            ctx.font = 'bold 24px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(dt.text, dt.x, dt.y);
-        }
-    }
+    _getX(c) { return this.startX + c * CELL + CELL / 2; }
+    _getY(r) { return this.startY + r * CELL + CELL / 2; }
 
     _initEvents() {
         this.canvas.style.touchAction = 'none';
@@ -243,11 +175,14 @@ class BattleScene {
         let skillText = '';
 
         if (skillName.includes('战士专精')) {
-            skillText = this._convertBalls(0);
+            this._convertBallsAnimated(0);
+            return;
         } else if (skillName.includes('弓箭手专精')) {
-            skillText = this._convertBalls(1);
+            this._convertBallsAnimated(1);
+            return;
         } else if (skillName.includes('法师专精')) {
-            skillText = this._convertBalls(3);
+            this._convertBallsAnimated(3);
+            return;
         } else if (skillName === '回复') {
             const healAmount = Math.floor(this.config.playerHp * 0.6);
             this.playerHp = Math.min(this.config.playerHp, this.playerHp + healAmount);
@@ -266,17 +201,30 @@ class BattleScene {
         this.draw();
     }
 
-    _convertBalls(targetType) {
-        let changed = 0;
+    async _convertBallsAnimated(targetType) {
+        const targetCells = [];
         for (let r = 0; r < GRID; r++) {
             for (let c = 0; c < GRID; c++) {
                 if (this.board.grid[r][c] === 4) {
-                    this.board.grid[r][c] = targetType;
-                    changed++;
+                    targetCells.push({ r, c });
                 }
             }
         }
-        return changed > 0 ? '技能发动！' : '没有无效珠子';
+
+        const skillText = targetCells.length > 0 ? '技能发动！' : '没有无效珠子';
+        this._showSkillEffect(skillText);
+
+        if (targetCells.length === 0) return;
+
+        this.anim.startConverting(targetCells, targetType);
+
+        await delay(350);
+
+        for (const { r, c } of targetCells) {
+            this.board.grid[r][c] = targetType;
+        }
+        this.anim.endConverting();
+        this.draw();
     }
 
     _showSkillEffect(text) {
@@ -343,6 +291,15 @@ class BattleScene {
         }
     }
 
+    _shakeEnemy() {
+        const container = document.querySelector('.enemy-hp-container');
+        if (!container) return;
+        container.classList.remove('shake');
+        void container.offsetWidth;
+        container.classList.add('shake');
+        setTimeout(() => container.classList.remove('shake'), 400);
+    }
+
     _updateEnemyHpDisplay() {
         const fill = document.getElementById('enemy-hp-fill');
         const text = document.getElementById('enemy-hp-text');
@@ -364,12 +321,9 @@ class BattleScene {
         }
     }
 
-    _getX(c) { return this.startX + c * CELL + CELL / 2; }
-    _getY(r) { return this.startY + r * CELL + CELL / 2; }
-
     _onDown(e) {
         e.preventDefault();
-        if (this.isProcessing || this.isSwapping) return;
+        if (this.isProcessing || this.isSwapping || this.anim.introAnimating) return;
 
         const rect = this.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -504,7 +458,7 @@ class BattleScene {
         if (this.enemyHp <= 0) {
             this.enemyHp = 0;
             if (this.currentEnemyIndex < this.enemies.length - 1) {
-                this._nextEnemy();
+                await this._nextEnemy();
             } else {
                 this._showVictory();
             }
@@ -512,7 +466,7 @@ class BattleScene {
         this.isProcessing = false;
     }
 
-    _nextEnemy() {
+    async _nextEnemy() {
         this.currentEnemyIndex++;
         const nextEnemyData = this.enemies[this.currentEnemyIndex];
         this.enemyHp = nextEnemyData.hp;
@@ -524,12 +478,26 @@ class BattleScene {
         this._updateEnemyHpDisplay();
 
         const ctx = this.ctx;
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        let alpha = 0;
+        const fadeOut = () => new Promise(resolve => {
+            const step = () => {
+                alpha += 0.05;
+                if (alpha >= 0.7) { alpha = 0.7; resolve(); return; }
+                ctx.fillStyle = `rgba(0,0,0,${alpha})`;
+                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                requestAnimationFrame(step);
+            };
+            step();
+        });
+        await fadeOut();
+
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
         ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         ctx.fillStyle = '#ff4';
         ctx.font = 'bold 24px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText(`下一波: ${this.enemyName}`, CANVAS_WIDTH / 2, 160);
+        ctx.fillText(`下一波: ${this.enemyName}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+        await delay(1200);
         this.draw();
     }
 
@@ -553,19 +521,25 @@ class BattleScene {
                     combos.push([colorName, group.cells.length, ballType]);
                 }
 
+                this.anim.startClearing(group.cells.map(({ r, c }) => ({ r, c, type: this.board.grid[r][c] })));
+                this.anim.showComboText(this.combo);
+
+                if (this.combo >= 4 && this.config.chainLightningBonus) {
+                    this.anim.startChainLightning(group.cells, this._getX.bind(this), this._getY.bind(this));
+                }
+                this.updateCharacterDisplay();
+                this.draw();
+                await delay(300);
+
                 for (const { r, c } of group.cells) {
                     this.board.grid[r][c] = null;
                 }
-
-                this.showCombo = this.combo;
-                this.showComboTime = Date.now();
-                this.updateCharacterDisplay();
+                this.anim.endClearing();
                 this.draw();
-                await delay(500);
+                await delay(200);
             }
 
-            this.showCombo = this.combo;
-            this.showComboTime = Date.now();
+            this.anim.showComboText(this.combo);
             this.updateCharacterDisplay();
             this.draw();
             await delay(200);
@@ -598,6 +572,7 @@ class BattleScene {
         if (totalDamage > 0) {
             this.enemyHp -= Math.floor(totalDamage);
             this._updateEnemyHpDisplay();
+            this._shakeEnemy();
             this._showDamageText(`-${Math.floor(totalDamage)}`);
         }
 
@@ -611,7 +586,7 @@ class BattleScene {
         if (totalHeal > 0) {
             this.playerHp = Math.min(this.config.playerHp, this.playerHp + Math.floor(totalHeal));
             this.updateCharacterDisplay();
-            this._showHealText(`+${Math.floor(totalHeal)}`);
+            this.anim.addDamageText(`+${Math.floor(totalHeal)}`, this.startX + (GRID * CELL) / 2, 20, true);
             this.draw();
         }
 
@@ -623,17 +598,10 @@ class BattleScene {
 
         const damage = Math.max(0, this.enemyAttack - this.config.playerDefense);
         this.playerHp = Math.max(0, this.playerHp - damage);
+        this.anim.flashPlayerHp();
         this.updateCharacterDisplay();
         if (damage > 0) {
-            this.damageTexts.push({
-                text: `-${damage}`,
-                x: this.startX + (GRID * CELL) / 2,
-                y: 15,
-                alpha: 1,
-                vy: 0,
-                isHeal: false
-            });
-            this._animateDamageText();
+            this.anim.addDamageText(`-${damage}`, this.startX + (GRID * CELL) / 2, 15, false);
         }
         this.draw();
 
@@ -645,21 +613,10 @@ class BattleScene {
     }
 
     _showGameOver() {
-        const ctx = this.ctx;
-        ctx.fillStyle = 'rgba(0,0,0,0.8)';
-        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-        ctx.fillStyle = '#f44';
-        ctx.font = 'bold 36px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('挑战失败', CANVAS_WIDTH / 2, 140);
-        ctx.font = 'bold 16px Arial';
-        ctx.fillStyle = '#fff';
-        ctx.fillText('重新挑战', CANVAS_WIDTH / 2, 200);
-        ctx.fillStyle = '#aaa';
-        ctx.font = 'bold 14px Arial';
-        ctx.fillText('点击任意处返回主界面', CANVAS_WIDTH / 2, 240);
-
         this.isGameOver = true;
+        this.anim.showVictoryOverlay(CANVAS_HEIGHT / 2 - 20);
+        this._dirty = true;
+
         this.canvas.onclick = (e) => {
             if (!this.isGameOver) return;
             const rect = this.canvas.getBoundingClientRect();
@@ -682,12 +639,11 @@ class BattleScene {
         this.isGameOver = false;
         this.isVictory = false;
         this.combo = 0;
-        this.showCombo = 0;
         this.hasMoved = false;
         this.stopTimer();
         this.timeLeft = this.config.timeLimit;
         this.characters = this.config.characters.map(c => ({ ...c, hp: 100 }));
-        this.damageTexts = [];
+        this.anim.reset();
         this.skillUsed = [false, false, false, false];
         this.attackMultiplier = 1;
         this.enemyDefenseReduction = 0;
@@ -718,46 +674,10 @@ class BattleScene {
         requestAnimationFrame(animate);
     }
 
-    _showHealText(text) {
-        this.damageTexts.push({
-            text,
-            x: this.startX + (GRID * CELL) / 2,
-            y: 15,
-            alpha: 1,
-            vy: 0,
-            isHeal: true
-        });
-        this._animateDamageText();
-    }
-
-    _animateDamageText() {
-        if (this._damageAnimating) return;
-        this._damageAnimating = true;
-
-        const animate = () => {
-            this.draw();
-            const hasActive = this.damageTexts.some(dt => dt.alpha > 0);
-            if (hasActive) {
-                requestAnimationFrame(animate);
-            } else {
-                this._damageAnimating = false;
-            }
-        };
-        requestAnimationFrame(animate);
-    }
-
     _showVictory() {
-        const ctx = this.ctx;
-        ctx.fillStyle = 'rgba(0,0,0,0.8)';
-        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-        ctx.fillStyle = '#ff4';
-        ctx.font = 'bold 36px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('关卡完成！', CANVAS_WIDTH / 2, 160);
-        ctx.font = 'bold 18px Arial';
-        ctx.fillText('点击返回主界面', CANVAS_WIDTH / 2, 200);
-
         this.isVictory = true;
+        this.anim.showVictoryOverlay(CANVAS_HEIGHT / 2 - 20);
+        this._dirty = true;
 
         fetch(`/api/levels/${this.config.levelId}/complete`, {
             method: 'POST',

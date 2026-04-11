@@ -9,29 +9,29 @@ class Board {
     }
 
     create() {
-        const types = ['melee', 'ranged', 'heal', 'magic', 'invalid'];
-        const getRandomType = () => {
-            let r = Math.random();
-            let cumulative = 0;
-            for (let i = 0; i < types.length; i++) {
-                cumulative += this.probability[types[i]];
-                if (r < cumulative) return i;
-            }
-            return 4;
-        };
-
         this.grid = [];
         for (let r = 0; r < GRID; r++) {
             this.grid[r] = [];
             for (let c = 0; c < GRID; c++) {
                 let type;
                 do {
-                    type = getRandomType();
+                    type = this._getRandomType();
                 } while (this._wouldMatch(r, c, type));
                 this.grid[r][c] = type;
             }
         }
         return this.grid;
+    }
+
+    _getRandomType() {
+        const types = ['melee', 'ranged', 'heal', 'magic', 'invalid'];
+        let r = Math.random();
+        let cumulative = 0;
+        for (let i = 0; i < types.length; i++) {
+            cumulative += this.probability[types[i]];
+            if (r < cumulative) return i;
+        }
+        return 4;
     }
 
     _wouldMatch(r, c, type) {
@@ -114,26 +114,37 @@ class Board {
                 const gid = groups.length - 1;
                 for (const c of match.cells) cellToGroup.set(`${c.r},${c.c}`, gid);
             } else {
-                let mainGroup = groups[touchingGroups[0]];
+                const mainGid = touchingGroups[0];
+                const mainGroup = groups[mainGid];
+                const existingKeys = new Set(mainGroup.cells.map(c => `${c.r},${c.c}`));
+
                 if (touchingGroups.length > 1) {
                     for (let i = 1; i < touchingGroups.length; i++) {
                         const oldGroup = groups[touchingGroups[i]];
                         for (const c of oldGroup.cells) {
-                            cellToGroup.set(`${c.r},${c.c}`, touchingGroups[0]);
+                            const key = `${c.r},${c.c}`;
+                            cellToGroup.set(key, mainGid);
+                            if (!existingKeys.has(key)) {
+                                mainGroup.cells.push(c);
+                                existingKeys.add(key);
+                            }
                         }
-                        mainGroup.cells = mainGroup.cells.concat(oldGroup.cells);
+                        oldGroup.cells = [];
                     }
                 }
+
                 for (const c of match.cells) {
-                    if (!cellToGroup.has(`${c.r},${c.c}`)) {
-                        cellToGroup.set(`${c.r},${c.c}`, touchingGroups[0]);
+                    const key = `${c.r},${c.c}`;
+                    cellToGroup.set(key, mainGid);
+                    if (!existingKeys.has(key)) {
+                        mainGroup.cells.push(c);
+                        existingKeys.add(key);
                     }
                 }
-                mainGroup.cells = mainGroup.cells.concat(match.cells);
             }
         }
 
-        return groups;
+        return groups.filter(g => g.cells.length > 0);
     }
 
     async drop() {
@@ -153,7 +164,7 @@ class Board {
             const ballsToAdd = GRID - nonNull.length;
             const newBalls = [];
             for (let i = 0; i < ballsToAdd; i++) {
-                newBalls.push({ type: Math.floor(Math.random() * 5), fromR: -(i + 1) });
+                newBalls.push({ type: this._getRandomType(), fromR: -(i + 1) });
             }
 
             const column = [...newBalls, ...nonNull];
