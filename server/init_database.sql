@@ -142,6 +142,25 @@ CREATE TABLE IF NOT EXISTS user_level_progress (
     FOREIGN KEY (level_id) REFERENCES levels(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 战斗进度表
+CREATE TABLE IF NOT EXISTS battle_sessions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    level_id INT NOT NULL,
+    team_id INT NOT NULL,
+    current_enemy_index INT DEFAULT 0,
+    enemy_hp INT NOT NULL,
+    player_hp INT NOT NULL,
+    skill_used VARCHAR(50) DEFAULT 'false,false,false,false',
+    board_grid TEXT NOT NULL,
+    status VARCHAR(20) DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (level_id) REFERENCES levels(id),
+    FOREIGN KEY (team_id) REFERENCES teams(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ============================================
 -- 插入基础数据
 -- ============================================

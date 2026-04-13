@@ -3,7 +3,7 @@ import random
 from datetime import datetime
 from typing import Optional, List, Dict, Any, Generator
 
-from sqlalchemy import func, case, or_, select
+from sqlalchemy import func, case, or_, select, update
 from sqlmodel import Session as SQLModelSession
 from passlib.hash import bcrypt
 from dotenv import load_dotenv
@@ -22,6 +22,7 @@ from models import (
     NamePool,
     UserLevelProgress,
     Chapter,
+    BattleSession,
 )
 
 load_dotenv()
@@ -171,6 +172,101 @@ def get_random_name() -> str:
             .first()
         )
         return name if name else f"角色{random.randint(100, 999)}"
+    finally:
+        session.close()
+
+
+def _get_random_name_session(session) -> str:
+    name = (
+        session.exec(select(NamePool.name).order_by(func.rand()).limit(1))
+        .scalars()
+        .first()
+    )
+    return name if name else f"角色{random.randint(100, 999)}"
+
+
+def _get_legendary_skills_session(session) -> list:
+    skills = (
+        session.exec(select(Skill).where(Skill.id.in_([12, 13, 14, 15])))
+        .scalars()
+        .all()
+    )
+    return [
+        {
+            "id": s.id,
+            "name": s.name,
+            "description": s.description,
+            "effect_value": s.effect_value,
+        }
+        for s in skills
+    ]
+
+
+def summon_character_full(
+    user_id: str,
+    character_type_id: int,
+    rarity: str,
+    bonuses: dict,
+    bound_passive_skill_id: Optional[int],
+) -> dict:
+    session = SQLModelSession(engine)
+    try:
+        user_row = session.get(User, user_id)
+        if not user_row:
+            raise ValueError("User not found")
+        max_chars = user_row.max_characters
+
+        count = session.scalar(
+            select(func.count())
+            .select_from(PlayerCharacter)
+            .where(PlayerCharacter.user_id == user_id, PlayerCharacter.status == 1)
+        )
+        if count >= max_chars:
+            raise ValueError("角色已达上限，请先解雇角色或扩充上限")
+
+        character_name = _get_random_name_session(session)
+
+        char = PlayerCharacter(
+            user_id=user_id,
+            character_type_id=character_type_id,
+            character_name=character_name,
+            rarity=rarity,
+            attack_bonus=bonuses["attack_bonus"],
+            defense_bonus=bonuses["defense_bonus"],
+            recovery_bonus=bonuses["recovery_bonus"],
+            hp_bonus=bonuses["hp_bonus"],
+            operation_time_bonus=bonuses["operation_time_bonus"],
+            bound_passive_skill_id=bound_passive_skill_id,
+        )
+        session.add(char)
+        session.commit()
+        session.refresh(char)
+
+        result = {
+            "id": char.id,
+            "user_id": char.user_id,
+            "character_type_id": char.character_type_id,
+            "character_name": char.character_name,
+            "rarity": char.rarity,
+            "attack_bonus": char.attack_bonus,
+            "defense_bonus": char.defense_bonus,
+            "recovery_bonus": char.recovery_bonus,
+            "hp_bonus": char.hp_bonus,
+            "operation_time_bonus": char.operation_time_bonus,
+            "bound_passive_skill_id": char.bound_passive_skill_id,
+            "status": char.status,
+            "dismissed_at": char.dismissed_at,
+            "created_at": char.created_at,
+            "bound_skill_name": None,
+            "bound_skill_desc": None,
+        }
+
+        if char.bound_passive_skill_id:
+            skill = session.get(Skill, char.bound_passive_skill_id)
+            if skill:
+                result["bound_skill_name"] = skill.name
+                result["bound_skill_desc"] = skill.description
+        return result
     finally:
         session.close()
 
@@ -696,3 +792,123 @@ def complete_level(user_id: str, level_id: int):
         session.commit()
     finally:
         session.close()
+
+
+def create_battle_session(
+    user_id: str,
+    level_id: int,
+    team_id: int,
+    enemy_hp: int,
+    player_hp: int,
+    board_grid: str,
+) -> dict:
+    session = SQLModelSession(engine)
+    try:
+        existing = (
+            session.exec(
+                select(BattleSession)
+                .where(BattleSession.user_id == user_id)
+                .where(BattleSession.status == "active")
+            )
+            .scalars()
+            .all()
+        )
+        for bs in existing:
+            bs.status = "abandoned"
+            session.add(bs)
+        session.commit()
+
+        bs = BattleSession(
+            user_id=user_id,
+            level_id=level_id,
+            team_id=team_id,
+            current_enemy_index=0,
+            enemy_hp=enemy_hp,
+            player_hp=player_hp,
+            skill_used="false,false,false,false",
+            board_grid=board_grid,
+            status="active",
+        )
+        session.add(bs)
+        session.commit()
+        session.refresh(bs)
+        return _battle_session_to_dict(bs)
+    finally:
+        session.close()
+
+
+def update_battle_session(
+    user_id: str,
+    session_id: int,
+    current_enemy_index: int,
+    enemy_hp: int,
+    player_hp: int,
+    skill_used: str,
+    board_grid: str,
+) -> Optional[dict]:
+    session = SQLModelSession(engine)
+    try:
+        bs = session.get(BattleSession, session_id)
+        if not bs or bs.user_id != user_id or bs.status != "active":
+            return None
+        bs.current_enemy_index = current_enemy_index
+        bs.enemy_hp = enemy_hp
+        bs.player_hp = player_hp
+        bs.skill_used = skill_used
+        bs.board_grid = board_grid
+        session.add(bs)
+        session.commit()
+        session.refresh(bs)
+        return _battle_session_to_dict(bs)
+    finally:
+        session.close()
+
+
+def get_active_battle_session(user_id: str) -> Optional[dict]:
+    session = SQLModelSession(engine)
+    try:
+        bs = (
+            session.exec(
+                select(BattleSession)
+                .where(BattleSession.user_id == user_id)
+                .where(BattleSession.status == "active")
+            )
+            .scalars()
+            .first()
+        )
+        if not bs:
+            return None
+        return _battle_session_to_dict(bs)
+    finally:
+        session.close()
+
+
+def delete_battle_session(user_id: str, session_id: int) -> bool:
+    session = SQLModelSession(engine)
+    try:
+        bs = session.get(BattleSession, session_id)
+        if not bs or bs.user_id != user_id:
+            return False
+        bs.status = "abandoned"
+        session.add(bs)
+        session.commit()
+        return True
+    finally:
+        session.close()
+
+
+def _battle_session_to_dict(bs: BattleSession) -> dict:
+    return {
+        "id": bs.id,
+        "user_id": bs.user_id,
+        "level_id": bs.level_id,
+        "team_id": bs.team_id,
+        "current_enemy_index": bs.current_enemy_index,
+        "enemy_hp": bs.enemy_hp,
+        "player_hp": bs.player_hp,
+        "skill_used": bs.skill_used,
+        "board_grid": bs.board_grid,
+        "status": bs.status,
+        "created_at": bs.created_at,
+        "updated_at": bs.updated_at,
+    }

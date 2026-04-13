@@ -179,3 +179,25 @@ class UserLevelProgress(SQLModel, table=True):
     )
 
     user: Optional[User] = Relationship(back_populates="level_progress")
+
+
+class BattleSession(SQLModel, table=True):
+    __tablename__ = "battle_sessions"
+
+    id: int = Field(default=None, primary_key=True)
+    user_id: str = Field(foreign_key="users.id")
+    level_id: int = Field(foreign_key="levels.id")
+    team_id: int = Field(foreign_key="teams.id")
+    current_enemy_index: int = Field(default=0)
+    enemy_hp: int = Field(default=0)
+    player_hp: int = Field(default=0)
+    skill_used: str = Field(default="false,false,false,false")
+    board_grid: str = Field(default="")
+    status: str = Field(default="active")
+    created_at: Optional[datetime] = Field(
+        default=None, sa_column_kwargs={"server_default": func.now()}
+    )
+    updated_at: Optional[datetime] = Field(
+        default=None,
+        sa_column_kwargs={"server_default": func.now(), "onupdate": func.now()},
+    )

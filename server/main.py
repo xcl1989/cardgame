@@ -31,12 +31,18 @@ from database import (
     complete_level,
     get_legendary_skills,
     create_character,
+    summon_character_full,
     get_random_name,
     get_user_character_count,
     get_user_max_characters,
     increase_max_characters,
     delete_character,
     get_chapters,
+    create_battle_session,
+    update_battle_session,
+    get_active_battle_session,
+    delete_battle_session,
+    Chapter,
 )
 
 load_dotenv()
@@ -103,6 +109,22 @@ class TeamCharacter(BaseModel):
 class TeamUpdateRequest(BaseModel):
     team_name: Optional[str] = None
     characters: List[TeamCharacter]
+
+
+class BattleSessionCreateRequest(BaseModel):
+    level_id: int
+    team_id: int
+    enemy_hp: int
+    player_hp: int
+    board_grid: str
+
+
+class BattleSessionUpdateRequest(BaseModel):
+    current_enemy_index: int
+    enemy_hp: int
+    player_hp: int
+    skill_used: str
+    board_grid: str
 
 
 async def get_current_user(authorization: Optional[str] = Header(None)) -> TokenData:
@@ -228,23 +250,16 @@ def summon_character(
     user_record=Depends(get_current_user_with_record),
 ):
     user_id = user_record[1]["id"]
-    count = get_user_character_count(user_id)
-    max_chars = get_user_max_characters(user_id)
-    if count >= max_chars:
-        raise HTTPException(
-            status_code=400, detail="角色已达上限，请先解雇角色或扩充上限"
-        )
 
     character_type_id = random.choice([1, 2, 3])
-    character_name = get_random_name()
 
     roll = random.randint(1, 100)
     cumulative = 0
     rarity = "normal"
-    for r, w in RARITY_WEIGHTS.items():
+    for rarity_name, w in RARITY_WEIGHTS.items():
         cumulative += w
         if roll <= cumulative:
-            rarity = r
+            rarity = rarity_name
             break
 
     bonuses = {attr: 0 for attr in BONUS_ATTRIBUTES}
@@ -263,14 +278,16 @@ def summon_character(
             skill = random.choice(legendary_skills)
             bound_passive_skill_id = skill["id"]
 
-    char = create_character(
-        user_id=user_record[1]["id"],
-        character_type_id=character_type_id,
-        character_name=character_name,
-        rarity=rarity,
-        bonuses=bonuses,
-        bound_passive_skill_id=bound_passive_skill_id,
-    )
+    try:
+        char = summon_character_full(
+            user_id=user_id,
+            character_type_id=character_type_id,
+            rarity=rarity,
+            bonuses=bonuses,
+            bound_passive_skill_id=bound_passive_skill_id,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     return char
 
 
@@ -486,3 +503,92 @@ def mark_level_complete(
 ):
     complete_level(user_record[1]["id"], level_id)
     return {"message": "Level completed"}
+
+
+@app.post("/battle-sessions")
+def start_battle_session(
+    req: BattleSessionCreateRequest,
+    user_record=Depends(get_current_user_with_record),
+):
+    user_id = user_record[1]["id"]
+    bs = create_battle_session(
+        user_id=user_id,
+        level_id=req.level_id,
+        team_id=req.team_id,
+        enemy_hp=req.enemy_hp,
+        player_hp=req.player_hp,
+        board_grid=req.board_grid,
+    )
+    return bs
+
+
+@app.post("/battle-sessions/{session_id}/save")
+def save_battle_session(
+    session_id: int,
+    req: BattleSessionUpdateRequest,
+    user_record=Depends(get_current_user_with_record),
+):
+    user_id = user_record[1]["id"]
+    bs = update_battle_session(
+        user_id=user_id,
+        session_id=session_id,
+        current_enemy_index=req.current_enemy_index,
+        enemy_hp=req.enemy_hp,
+        player_hp=req.player_hp,
+        skill_used=req.skill_used,
+        board_grid=req.board_grid,
+    )
+    if not bs:
+        raise HTTPException(status_code=404, detail="Battle session not found")
+    return bs
+
+
+@app.get("/battle-sessions/active")
+def get_current_battle_session(
+    user_record=Depends(get_current_user_with_record),
+):
+    user_id = user_record[1]["id"]
+    bs = get_active_battle_session(user_id)
+    if not bs:
+        return None
+
+    from database import get_team
+    from sqlmodel import Session as SQLModelSession
+    from database import engine
+    from models import Level
+
+    level_data = get_level(bs["level_id"])
+    team_data = get_team(bs["team_id"])
+
+    chapter_name = None
+    if level_data:
+        with SQLModelSession(engine) as sess:
+            level_row = sess.get(Level, bs["level_id"])
+            if level_row and level_row.chapter_id:
+                chapter_row = sess.get(Chapter, level_row.chapter_id)
+                if chapter_row:
+                    chapter_name = chapter_row.chapter_name
+
+    total_enemies = 0
+    if level_data and "enemies" in level_data:
+        total_enemies = len(level_data["enemies"])
+
+    return {
+        **bs,
+        "chapter_name": chapter_name or "",
+        "level_name": level_data["level_name"] if level_data else "",
+        "team_name": team_data["team_name"] if team_data else "",
+        "total_enemies": total_enemies,
+    }
+
+
+@app.delete("/battle-sessions/{session_id}")
+def abandon_battle_session(
+    session_id: int,
+    user_record=Depends(get_current_user_with_record),
+):
+    user_id = user_record[1]["id"]
+    ok = delete_battle_session(user_id, session_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Battle session not found")
+    return {"message": "Battle session abandoned"}

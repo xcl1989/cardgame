@@ -161,6 +161,7 @@ function calculateBattleConfig(level, team) {
         healFromInvalidBonus: healFromInvalidEquipped,
         enemies: level.enemies || [{ enemy_name: '敌人', hp: 500, attack: 20 }],
         levelId: level.id,
+        teamId: team.id,
         characters
     };
 }

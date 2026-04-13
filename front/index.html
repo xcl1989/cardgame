@@ -321,6 +321,75 @@
             background: #666;
             color: #fff;
         }
+        .confirm-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.75);
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        .confirm-modal.show {
+            display: flex;
+        }
+        .confirm-modal-box {
+            background: linear-gradient(145deg, #2a2a4e 0%, #1e1e3a 100%);
+            border: 1.5px solid #5a5a9e;
+            border-radius: 16px;
+            padding: 28px 24px 22px;
+            max-width: 290px;
+            width: 85%;
+            text-align: center;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+        }
+        .confirm-modal-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+            line-height: 1;
+        }
+        .confirm-modal-title {
+            font-size: 17px;
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+        .confirm-modal-desc {
+            font-size: 13px;
+            color: #aaa;
+            line-height: 1.6;
+            margin-bottom: 22px;
+        }
+        .confirm-modal-btns {
+            display: flex;
+            gap: 10px;
+        }
+        .confirm-modal-btn {
+            flex: 1;
+            padding: 11px 0;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: transform 0.1s, opacity 0.1s;
+        }
+        .confirm-modal-btn:active {
+            transform: scale(0.96);
+        }
+        .confirm-modal-btn.cancel {
+            background: rgba(255,255,255,0.08);
+            color: #aaa;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        .confirm-modal-btn.danger {
+            background: linear-gradient(135deg, #ff6666, #ee4444);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(255,68,68,0.35);
+        }
         @keyframes enemyShake {
             0%, 100% { transform: translateX(0); }
             15% { transform: translateX(-6px); }
@@ -384,16 +453,28 @@
         </div>
     </div>
     
-    <div class="skill-modal" id="skillModal">
-        <div class="skill-modal-content">
-            <div class="skill-modal-title" id="skillModalTitle">使用技能</div>
-            <div class="skill-modal-desc" id="skillModalDesc">技能描述</div>
-            <div class="skill-modal-btns">
-                <button class="skill-modal-btn cancel" onclick="closeSkillModal()">取消</button>
-                <button class="skill-modal-btn confirm" onclick="confirmUseSkill()">确认使用</button>
+        <div class="skill-modal" id="skillModal">
+            <div class="skill-modal-content">
+                <div class="skill-modal-title" id="skillModalTitle">使用技能</div>
+                <div class="skill-modal-desc" id="skillModalDesc">技能描述</div>
+                <div class="skill-modal-btns">
+                    <button class="skill-modal-btn cancel" onclick="closeSkillModal()">取消</button>
+                    <button class="skill-modal-btn confirm" onclick="confirmUseSkill()">确认使用</button>
+                </div>
             </div>
         </div>
-    </div>
+
+        <div class="confirm-modal" id="confirmModal">
+            <div class="confirm-modal-box">
+                <div class="confirm-modal-icon">⚠️</div>
+                <div class="confirm-modal-title" id="confirmTitle">确认退出？</div>
+                <div class="confirm-modal-desc" id="confirmDesc">退出后当前战斗进度将清空，需要重新开始。</div>
+                <div class="confirm-modal-btns">
+                    <button class="confirm-modal-btn cancel" id="confirmCancel">取消</button>
+                    <button class="confirm-modal-btn danger" id="confirmOk">确定退出</button>
+                </div>
+            </div>
+        </div>
 
         <script src="common/auth.js"></script>
         <script src="common/utils.js"></script>
@@ -404,7 +485,34 @@
         }
 
         function goToMain() {
+            const game = window.game;
+            if (game && !game.isVictory && !game.isGameOver) {
+                showConfirmModal('确认退出？', '退出后当前战斗进度将清空，需要重新开始。', () => {
+                    game._clearProgress();
+                    window.location.href = 'main.html';
+                });
+                return;
+            }
             window.location.href = 'main.html';
+        }
+
+        function showConfirmModal(title, desc, onConfirm) {
+            document.getElementById('confirmTitle').textContent = title;
+            document.getElementById('confirmDesc').textContent = desc;
+            const modal = document.getElementById('confirmModal');
+            modal.classList.add('show');
+
+            const okBtn = document.getElementById('confirmOk');
+            const cancelBtn = document.getElementById('confirmCancel');
+
+            const cleanup = () => {
+                modal.classList.remove('show');
+                okBtn.onclick = null;
+                cancelBtn.onclick = null;
+            };
+
+            okBtn.onclick = () => { cleanup(); onConfirm(); };
+            cancelBtn.onclick = () => cleanup();
         }
 
         function getQueryParam(param) {
@@ -516,9 +624,10 @@
             }
 
             try {
-                const [levelRes, teamsRes] = await Promise.all([
+                const [levelRes, teamsRes, battleRes] = await Promise.all([
                     apiFetch(`/levels/${levelId}`),
-                    apiFetch('/teams')
+                    apiFetch('/teams'),
+                    apiFetch('/battle-sessions/active')
                 ]);
 
                 if (!levelRes || !levelRes.ok || !teamsRes || !teamsRes.ok) {
@@ -535,7 +644,15 @@
                     return null;
                 }
 
-                return { level, team };
+                let battleSession = null;
+                if (battleRes && battleRes.ok) {
+                    battleSession = await battleRes.json();
+                    if (!battleSession || battleSession.level_id != levelId || battleSession.team_id != teamId) {
+                        battleSession = null;
+                    }
+                }
+
+                return { level, team, battleSession };
             } catch (e) {
                 console.error('Failed to load battle config:', e);
                 window.location.href = 'main.html';

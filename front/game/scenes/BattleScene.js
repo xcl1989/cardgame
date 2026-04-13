@@ -8,7 +8,7 @@ import AnimationManager from '../effects/AnimationManager.js';
 import BattleRenderer from '../effects/BattleRenderer.js';
 
 class BattleScene {
-    constructor(config) {
+    constructor(config, battleSession = null) {
         this.config = config;
         this.container = document.querySelector('#board-section');
         if (!this.container) {
@@ -69,10 +69,102 @@ class BattleScene {
         this.attackMultiplier = 1;
         this.enemyDefenseReduction = 0;
 
+        this.sessionId = null;
+
+        if (battleSession) {
+            this._restoreFromSession(battleSession);
+        } else {
+            this._initEvents();
+            this.updateCharacterDisplay();
+            this._startRenderLoop();
+            this._playIntro();
+        }
+    }
+
+    _restoreFromSession(bs) {
+        this.sessionId = bs.id;
+        this.currentEnemyIndex = bs.current_enemy_index;
+        const enemy = this.enemies[this.currentEnemyIndex];
+        this.enemyHp = bs.enemy_hp;
+        this.enemyName = enemy.enemy_name;
+        this.enemyAttack = enemy.attack;
+        this.enemyDefense = enemy.defense || 0;
+        this.playerHp = bs.player_hp;
+        const skillArr = bs.skill_used.split(',');
+        this.skillUsed = skillArr.map(v => v === 'true');
+        this.attackMultiplier = 1;
+        this.enemyDefenseReduction = 0;
+        this.isTimerRunning = false;
+        this.timeLeft = this.config.timeLimit;
+
+        try {
+            const savedGrid = JSON.parse(bs.board_grid);
+            if (!savedGrid || !Array.isArray(savedGrid) || savedGrid.length !== GRID) {
+                console.error('Invalid board_grid in session, recreating board');
+                this.board.create();
+            } else {
+                for (let r = 0; r < GRID; r++) {
+                    if (!savedGrid[r] || savedGrid[r].length !== GRID) continue;
+                    for (let c = 0; c < GRID; c++) {
+                        this.board.grid[r][c] = savedGrid[r][c];
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Failed to restore board:', e);
+            this.board.create();
+        }
+
         this._initEvents();
         this.updateCharacterDisplay();
+        this._updateEnemyHpDisplay();
         this._startRenderLoop();
-        this._playIntro();
+        this.draw();
+    }
+
+    async _saveProgress() {
+        if (!this.sessionId) return;
+        const grid = this.board.grid.map(row => [...row]);
+        if (!grid || !Array.isArray(grid) || grid.length !== GRID) {
+            console.error('Invalid grid to save:', grid);
+            return;
+        }
+        const payload = {
+            current_enemy_index: this.currentEnemyIndex,
+            enemy_hp: this.enemyHp,
+            player_hp: this.playerHp,
+            skill_used: this.skillUsed.join(','),
+            board_grid: JSON.stringify(grid),
+        };
+        console.log('[SaveProgress] Saving board_grid sample:', JSON.stringify(grid).slice(0, 100));
+        try {
+            const res = await fetch(`/api/battle-sessions/${this.sessionId}/save`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(payload),
+            });
+            if (!res.ok) {
+                console.error('Failed to save progress:', res.status, await res.text());
+            }
+        } catch (e) {
+            console.error('Failed to save progress:', e);
+        }
+    }
+
+    async _clearProgress() {
+        if (!this.sessionId) return;
+        try {
+            await fetch(`/api/battle-sessions/${this.sessionId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
+        } catch (e) {
+            console.error('Failed to clear progress:', e);
+        }
+        this.sessionId = null;
     }
 
     async _playIntro() {
@@ -476,6 +568,7 @@ class BattleScene {
         this.attackMultiplier = 1;
         this.enemyDefenseReduction = 0;
         this._updateEnemyHpDisplay();
+        await this._saveProgress();
 
         const ctx = this.ctx;
         let alpha = 0;
@@ -624,6 +717,7 @@ class BattleScene {
             if (y >= 180 && y <= 220) {
                 this._restartBattle();
             } else {
+                this._clearProgress();
                 window.location.href = 'main.html';
             }
         };
@@ -687,6 +781,8 @@ class BattleScene {
         }).catch(err => {
             console.error('Failed to mark level complete:', err);
         });
+
+        this._clearProgress();
 
         this.canvas.onclick = () => {
             if (this.isVictory) window.location.href = 'main.html';

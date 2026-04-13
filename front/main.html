@@ -84,6 +84,30 @@
         .menu-btn.battle:hover {
             border-color: #ffaaaa;
         }
+        .menu-btn.battle {
+            background: linear-gradient(135deg, #ff6666, #ff4444);
+            border-color: #ff8888;
+            align-items: stretch;
+        }
+        .menu-btn.battle > .icon {
+            align-self: center;
+        }
+        .menu-btn.battle .btn-text {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 2px;
+        }
+        .menu-btn.battle .btn-sub {
+            font-size: 12px;
+            font-weight: normal;
+            color: rgba(255,255,255,0.85);
+        }
+        .menu-btn.battle .btn-sub2 {
+            font-size: 11px;
+            font-weight: normal;
+            color: rgba(255,255,255,0.65);
+        }
         .menu-btn.characters {
             background: linear-gradient(135deg, #4488ff, #2266dd);
             border-color: #66aaff;
@@ -131,19 +155,51 @@
                 <span class="icon">⚔️</span>
                 <span>队伍设置</span>
             </button>
-            <button class="menu-btn battle" onclick="startBattle()">
+            <button class="menu-btn battle" id="battleBtn" onclick="startBattle()">
                 <span class="icon">🎮</span>
-                <span>进入战斗</span>
+                <span class="btn-text">
+                    <span id="battleBtnText">进入战斗</span>
+                    <span class="btn-sub" id="battleBtnSub" style="display:none"></span>
+                    <span class="btn-sub2" id="battleBtnSub2" style="display:none"></span>
+                </span>
             </button>
         </div>
     </div>
 
     <script src="common/auth.js"></script>
     <script>
+        let activeBattleSession = null;
+
         async function init() {
             const authData = await checkAuth();
             if (authData) {
                 document.getElementById('nickname').textContent = authData.nickname;
+            }
+
+            try {
+                const res = await apiFetch('/battle-sessions/active');
+                if (res && res.ok) {
+                    const bs = await res.json();
+                    if (bs && bs.status === 'active') {
+                        activeBattleSession = bs;
+                        const btn = document.getElementById('battleBtn');
+                        const btnText = document.getElementById('battleBtnText');
+                        const btnSub = document.getElementById('battleBtnSub');
+                        const btnSub2 = document.getElementById('battleBtnSub2');
+                        btnText.textContent = '继续战斗';
+                        btn.style.background = 'linear-gradient(135deg, #ffaa44, #ff8800)';
+                        btn.style.borderColor = '#ffcc66';
+
+                        const progress = (bs.current_enemy_index + 1);
+                        const total = bs.total_enemies || '?';
+                        btnSub.textContent = `${bs.chapter_name} · ${bs.level_name} · 进度 ${progress}/${total}`;
+                        btnSub.style.display = '';
+                        btnSub2.textContent = `${bs.team_name} · HP: ${bs.player_hp}`;
+                        btnSub2.style.display = '';
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to check active battle:', e);
             }
         }
 
@@ -156,7 +212,11 @@
         }
 
         function startBattle() {
-            window.location.href = 'level-select.html';
+            if (activeBattleSession) {
+                window.location.href = `index.html?level_id=${activeBattleSession.level_id}&team_id=${activeBattleSession.team_id}`;
+            } else {
+                window.location.href = 'level-select.html';
+            }
         }
 
         init();
