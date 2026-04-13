@@ -22,14 +22,17 @@ cardgame/
 │   ├── common/               # Shared modules
 │   │   ├── auth.js           # Auth & API wrapper (JWT Token)
 │   │   ├── common.css        # Global styles & layout
-│   │   └── utils.js          # Utilities (XSS escaping, loading, etc.)
+│   │   └── utils.js           # Utilities (XSS escaping, loading, etc.)
 │   ├── game/                 # Core game modules
-│   │   ├── config.js        # Battle config calculation
+│   │   ├── config.js         # Battle config calculation
 │   │   ├── main.js           # Game entry point
 │   │   ├── objects/          # Game objects
 │   │   │   └── Board.js      # Board logic (create, match, drop)
 │   │   ├── scenes/           # Scenes
-│   │   │   └── BattleScene.js # Battle scene (rendering, interaction, skills)
+│   │   │   └── BattleScene.js # Battle scene (game logic)
+│   │   ├── effects/          # Rendering & animation
+│   │   │   ├── BattleRenderer.js  # Canvas rendering
+│   │   │   └── AnimationManager.js # Animation state management
 │   │   └── utils/            # Utilities
 │   │       ├── constants.js  # Constants (colors, types, dimensions)
 │   │       └── helpers.js    # Helper functions
@@ -44,9 +47,9 @@ cardgame/
 │   ├── package.json
 │   └── vite.config.js
 ├── server/                   # Backend (Python FastAPI + SQLModel ORM)
-│   ├── main.py              # API endpoints
+│   ├── main.py              # API endpoints (incl. battle session persistence)
 │   ├── database.py          # Database operations (SQLModel ORM)
-│   ├── models.py            # Database model definitions (11 tables)
+│   ├── models.py            # Database model definitions (13 tables)
 │   ├── init_database.sql     # Database init (with seed data)
 │   ├── requirements.txt
 │   └── alembic/             # Database migrations
@@ -100,6 +103,9 @@ npm run build    # Production build
 - **Skill System**: Each character has passive and active skills
 - **Team System**: 4-character parties, each character can be assigned passive and active skills
 - **Level Design**: Multi-wave enemies, BOSS battles
+- **Chapter System**: Levels grouped by chapter (Beginner Village, Goblin Forest, etc.)
+- **Battle Progress**: Pause and resume — refreshing the page restores the board and HP state
+- **Animations**: Elimination flash, hit shake, chain lightning, enemy wave transition, time bar flicker
 
 ## Tech Stack
 
@@ -123,6 +129,8 @@ npm run build    # Production build
 | level_enemy_map | Level-enemy mapping | (level_id, enemy_id, slot_position) |
 | name_pool | Random name pool | id (auto-increment) |
 | user_level_progress | User level progress | id (auto-increment) |
+| chapters | Chapters | id (auto-increment) |
+| battle_sessions | Battle session archive | id (auto-increment) |
 
 ## Code Style
 

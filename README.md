@@ -21,15 +21,18 @@ cardgame/
 ├── front/                     # 前端 (原生 JS + HTML5 Canvas + Vite)
 │   ├── common/               # 公共模块
 │   │   ├── auth.js           # 认证 & API 封装 (JWT Token)
-│   │   ├── common.css       # 全局样式 & 布局
-│   │   └── utils.js          # 工具函数 (XSS转义、loading等)
+│   │   ├── common.css         # 全局样式 & 布局
+│   │   └── utils.js           # 工具函数 (XSS转义、loading等)
 │   ├── game/                 # 游戏核心模块
-│   │   ├── config.js        # 战斗配置计算
+│   │   ├── config.js         # 战斗配置计算
 │   │   ├── main.js           # 游戏入口
-│   │   ├── objects/          # 游戏对象
+│   │   ├── objects/           # 游戏对象
 │   │   │   └── Board.js      # 棋盘逻辑 (创建、匹配、掉落)
 │   │   ├── scenes/           # 场景
-│   │   │   └── BattleScene.js # 战斗场景 (渲染、交互、技能)
+│   │   │   └── BattleScene.js # 战斗场景 (游戏逻辑)
+│   │   ├── effects/          # 渲染 & 动画
+│   │   │   ├── BattleRenderer.js  # Canvas 渲染
+│   │   │   └── AnimationManager.js # 动画状态管理
 │   │   └── utils/            # 工具
 │   │       ├── constants.js  # 常量 (颜色、类型、尺寸)
 │   │       └── helpers.js    # 辅助函数
@@ -44,9 +47,9 @@ cardgame/
 │   ├── package.json
 │   └── vite.config.js
 ├── server/                   # 后端 (Python FastAPI + SQLModel ORM)
-│   ├── main.py              # API 接口
+│   ├── main.py              # API 接口 (含战斗进度持久化)
 │   ├── database.py          # 数据库操作 (SQLModel ORM)
-│   ├── models.py            # 数据库模型定义 (11张表)
+│   ├── models.py            # 数据库模型定义 (13张表)
 │   ├── init_database.sql     # 数据库初始化 (含种子数据)
 │   ├── requirements.txt
 │   └── alembic/             # 数据库迁移
@@ -100,6 +103,9 @@ npm run build    # 生产构建
 - **技能系统**: 每个角色有被动技能和主动技能，传说角色绑定专属被动技能
 - **队伍系统**: 4人编队，每个角色可配置被动和主动技能
 - **关卡设计**: 多波次敌人，BOSS 战
+- **章节系统**: 关卡按章节分组（新手村、哥布林森林等）
+- **战斗进度**: 中途退出可继续，刷新页面自动恢复棋盘和血量状态
+- **动画效果**: 消除闪光、受击震动、连锁闪电、敌人换波过渡、时间条闪烁等
 
 ## 技术栈
 
@@ -123,6 +129,8 @@ npm run build    # 生产构建
 | level_enemy_map | 关卡-敌人关联 | (level_id, enemy_id, slot_position) |
 | name_pool | 随机名字池 | id (自增) |
 | user_level_progress | 用户关卡进度 | id (自增) |
+| chapters | 章节 | id (自增) |
+| battle_sessions | 战斗进度存档 | id (自增) |
 
 ## 代码规范
 
