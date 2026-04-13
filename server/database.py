@@ -364,6 +364,23 @@ def increase_max_characters(user_id: str, amount: int = 5) -> int:
         session.close()
 
 
+def is_character_in_any_team(character_id: int) -> bool:
+    session = SQLModelSession(engine)
+    try:
+        result = (
+            session.exec(
+                select(TeamCharacterMap).where(
+                    TeamCharacterMap.character_id == character_id
+                )
+            )
+            .scalars()
+            .first()
+        )
+        return result is not None
+    finally:
+        session.close()
+
+
 def delete_character(user_id: str, character_id: int) -> bool:
     session = SQLModelSession(engine)
     try:

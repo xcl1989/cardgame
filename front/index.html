@@ -487,8 +487,8 @@
         function goToMain() {
             const game = window.game;
             if (game && !game.isVictory && !game.isGameOver) {
-                showConfirmModal('确认退出？', '退出后当前战斗进度将清空，需要重新开始。', () => {
-                    game._clearProgress();
+                showConfirmModal('确认退出？', '退出后当前战斗进度将清空，需要重新开始。', async () => {
+                    await game._clearProgress();
                     window.location.href = 'main.html';
                 });
                 return;

@@ -70,6 +70,7 @@ class BattleScene {
         this.enemyDefenseReduction = 0;
 
         this.sessionId = null;
+        this._onIntroComplete = null;
 
         if (battleSession) {
             this._restoreFromSession(battleSession);
@@ -210,6 +211,7 @@ class BattleScene {
 
         this.anim.introAnimating = false;
         this.draw();
+        if (this._onIntroComplete) this._onIntroComplete();
     }
 
     _startRenderLoop() {
@@ -552,7 +554,7 @@ class BattleScene {
             if (this.currentEnemyIndex < this.enemies.length - 1) {
                 await this._nextEnemy();
             } else {
-                this._showVictory();
+                await this._showVictory();
             }
         }
         this.isProcessing = false;
@@ -710,14 +712,14 @@ class BattleScene {
         this.anim.showVictoryOverlay(CANVAS_HEIGHT / 2 - 20);
         this._dirty = true;
 
-        this.canvas.onclick = (e) => {
+        this.canvas.onclick = async (e) => {
             if (!this.isGameOver) return;
             const rect = this.canvas.getBoundingClientRect();
             const y = e.clientY - rect.top;
             if (y >= 180 && y <= 220) {
                 this._restartBattle();
             } else {
-                this._clearProgress();
+                await this._clearProgress();
                 window.location.href = 'main.html';
             }
         };
@@ -768,7 +770,7 @@ class BattleScene {
         requestAnimationFrame(animate);
     }
 
-    _showVictory() {
+    async _showVictory() {
         this.isVictory = true;
         this.anim.showVictoryOverlay(CANVAS_HEIGHT / 2 - 20);
         this._dirty = true;
@@ -782,7 +784,7 @@ class BattleScene {
             console.error('Failed to mark level complete:', err);
         });
 
-        this._clearProgress();
+        await this._clearProgress();
 
         this.canvas.onclick = () => {
             if (this.isVictory) window.location.href = 'main.html';

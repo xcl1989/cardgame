@@ -37,6 +37,7 @@ from database import (
     get_user_max_characters,
     increase_max_characters,
     delete_character,
+    is_character_in_any_team,
     get_chapters,
     create_battle_session,
     update_battle_session,
@@ -308,6 +309,10 @@ def dismiss_character(
     character_id: int,
     user_record=Depends(get_current_user_with_record),
 ):
+    if is_character_in_any_team(character_id):
+        raise HTTPException(
+            status_code=400, detail="该角色已编入队伍，请先移出队伍后再解雇"
+        )
     ok = delete_character(user_record[1]["id"], character_id)
     if not ok:
         raise HTTPException(status_code=404, detail="角色不存在")
@@ -349,9 +354,14 @@ def update_existing_team(
     req: TeamUpdateRequest,
     user_record=Depends(get_current_user_with_record),
 ):
+    user_id = user_record[1]["id"]
+    active_bs = get_active_battle_session(user_id)
+    if active_bs and active_bs["team_id"] == team_id:
+        raise HTTPException(status_code=400, detail="该队伍正在战斗中，无法编辑")
+
     logger.info(f"Update team request: team_id={team_id}, body={req}")
     team = get_team(team_id)
-    if not team or team["user_id"] != user_record[1]["id"]:
+    if not team or team["user_id"] != user_id:
         raise HTTPException(
             status_code=403, detail="Not authorized to modify this team"
         )
@@ -367,8 +377,13 @@ def delete_existing_team(
     team_id: int,
     user_record=Depends(get_current_user_with_record),
 ):
+    user_id = user_record[1]["id"]
+    active_bs = get_active_battle_session(user_id)
+    if active_bs and active_bs["team_id"] == team_id:
+        raise HTTPException(status_code=400, detail="该队伍正在战斗中，无法删除")
+
     team = get_team(team_id)
-    if not team or team["user_id"] != user_record[1]["id"]:
+    if not team or team["user_id"] != user_id:
         raise HTTPException(
             status_code=403, detail="Not authorized to delete this team"
         )

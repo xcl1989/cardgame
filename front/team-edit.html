@@ -688,11 +688,16 @@
                     }))
                 };
                 if (teamId) {
-                    await apiFetch(`/teams/${teamId}/update`, {
+                    const updateRes = await apiFetch(`/teams/${teamId}/update`, {
                         method: 'POST',
                         headers,
                         body: JSON.stringify(payload)
                     });
+                    if (!updateRes || !updateRes.ok) {
+                        const err = updateRes ? await updateRes.json() : {};
+                        alert(err.detail || '保存失败');
+                        return;
+                    }
                 } else {
                     const res = await apiFetch('/teams', {
                         method: 'POST',
@@ -702,11 +707,16 @@
                     if (res && res.ok) {
                         const data = await res.json();
                         teamId = data.id;
-                        await apiFetch(`/teams/${teamId}/update`, {
+                        const updateRes = await apiFetch(`/teams/${teamId}/update`, {
                             method: 'POST',
                             headers,
                             body: JSON.stringify({ characters: payload.characters })
                         });
+                        if (!updateRes || !updateRes.ok) {
+                            const err = updateRes ? await updateRes.json() : {};
+                            alert(err.detail || '保存失败');
+                            return;
+                        }
                     }
                 }
                 window.location.href = 'team.html';

@@ -337,8 +337,13 @@
             const c = allCharsData.find(x => x.id === charId);
             if (!c) return;
             showConfirm(`确定解雇 ${c.character_name} 吗？`, async () => {
-                await apiFetch(`/characters/${charId}`, { method: 'DELETE' });
-                loadCharacters();
+                const res = await apiFetch(`/characters/${charId}`, { method: 'DELETE' });
+                if (res && res.ok) {
+                    loadCharacters();
+                } else if (res) {
+                    const err = await res.json();
+                    alert(err.detail || '解雇失败');
+                }
             });
         }
 

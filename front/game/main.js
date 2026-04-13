@@ -14,35 +14,37 @@ async function initGame() {
     window.game = new BattleScene(gameConfig, battleSession);
 
     if (!battleSession) {
-        const grid = window.game.board.grid.map(row => [...row]);
-        const firstEnemy = gameConfig.enemies[0];
-        const payload = {
-            level_id: gameConfig.levelId,
-            team_id: gameConfig.teamId,
-            enemy_hp: firstEnemy.hp,
-            player_hp: gameConfig.playerHp,
-            board_grid: JSON.stringify(grid),
-        };
-        console.log('[InitGame] Creating session, board_grid sample:', JSON.stringify(grid).slice(0, 100));
-        try {
-            const res = await fetch('/api/battle-sessions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify(payload),
-            });
-            if (res.ok) {
-                const bs = await res.json();
-                window.game.sessionId = bs.id;
-                console.log('[InitGame] Session created, id:', bs.id);
-            } else {
-                console.error('[InitGame] Failed to create session:', res.status, await res.text());
+        window.game._onIntroComplete = async () => {
+            const grid = window.game.board.grid.map(row => [...row]);
+            const firstEnemy = gameConfig.enemies[0];
+            const payload = {
+                level_id: gameConfig.levelId,
+                team_id: gameConfig.teamId,
+                enemy_hp: firstEnemy.hp,
+                player_hp: gameConfig.playerHp,
+                board_grid: JSON.stringify(grid),
+            };
+            console.log('[InitGame] Creating session, board_grid sample:', JSON.stringify(grid).slice(0, 100));
+            try {
+                const res = await fetch('/api/battle-sessions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(payload),
+                });
+                if (res.ok) {
+                    const bs = await res.json();
+                    window.game.sessionId = bs.id;
+                    console.log('[InitGame] Session created, id:', bs.id);
+                } else {
+                    console.error('[InitGame] Failed to create session:', res.status, await res.text());
+                }
+            } catch (e) {
+                console.error('Failed to create battle session:', e);
             }
-        } catch (e) {
-            console.error('Failed to create battle session:', e);
-        }
+        };
     }
 
     document.getElementById('loading-overlay').style.display = 'none';
